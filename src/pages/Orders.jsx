@@ -23,18 +23,44 @@ export default function Orders() {
   const [orders, setOrders] = useState([])
   const [selectedPayment, setSelectedPayment] = useState(null)
   const [rowQuantities, setRowQuantities] = useState({})
+  const [clickedButtons, setClickedButtons] = useState({})
 
   useEffect(() => {
-    // Simulate loading
+    // Load menu items and orders from localStorage
     setTimeout(() => {
-      setMenuItems(MOCK_MENU_ITEMS)
-      setRowQuantities(MOCK_MENU_ITEMS.reduce((acc, item) => {
-        acc[item.id] = 1
-        return acc
-      }, {}))
+      // Load menu items
+      const savedMenuItems = localStorage.getItem('menuItems')
+      if (savedMenuItems) {
+        setMenuItems(JSON.parse(savedMenuItems))
+        const items = JSON.parse(savedMenuItems)
+        setRowQuantities(items.reduce((acc, item) => {
+          acc[item.id] = 1
+          return acc
+        }, {}))
+      } else {
+        setMenuItems(MOCK_MENU_ITEMS)
+        setRowQuantities(MOCK_MENU_ITEMS.reduce((acc, item) => {
+          acc[item.id] = 1
+          return acc
+        }, {}))
+      }
+      
+      // Load orders
+      const savedOrders = localStorage.getItem('orders')
+      if (savedOrders) {
+        setOrders(JSON.parse(savedOrders))
+      }
+      
       setLoading(false)
     }, 500)
   }, [])
+
+  // Save orders to localStorage whenever they change
+  useEffect(() => {
+    if (orders.length > 0) {
+      localStorage.setItem('orders', JSON.stringify(orders))
+    }
+  }, [orders])
 
   const addToCart = (item, quantity = 1) => {
     const existingItem = cart.find(cartItem => cartItem.id === item.id)
@@ -49,6 +75,20 @@ export default function Orders() {
     } else {
       setCart([...cart, { ...item, quantity: qtyToAdd }])
     }
+    
+    // Turn button green on click
+    setClickedButtons(prev => ({
+      ...prev,
+      [item.id]: true
+    }))
+    
+    // Reset after 2 seconds
+    setTimeout(() => {
+      setClickedButtons(prev => ({
+        ...prev,
+        [item.id]: false
+      }))
+    }, 2000)
   }
 
   const adjustRowQuantity = (itemId, delta) => {
@@ -84,12 +124,14 @@ export default function Orders() {
 
     const orderNumber = `ORD-${Date.now()}`
     const now = new Date()
+    const total = calculateTotal()
     const newOrder = {
       id: orders.length + 1,
       orderNumber,
-      date: now.toISOString().split('T')[0],
+      date: now.toISOString(),
       time: now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }),
-      totalAmount: calculateTotal(),
+      total: total,
+      totalAmount: total,
       status: 'pending',
       paymentMethod: selectedPayment,
       items: cart.map(item => ({
@@ -100,11 +142,16 @@ export default function Orders() {
       }))
     }
 
-    setOrders([...orders, newOrder])
+    const updatedOrders = [...orders, newOrder]
+    setOrders(updatedOrders)
     
-    // Dispatch event to update badge
+    // Save to localStorage
+    localStorage.setItem('orders', JSON.stringify(updatedOrders))
+    
+    // Dispatch event to update badge and dashboard
     const pendingCount = 1 + orders.filter(o => o.status === 'pending').length
     window.dispatchEvent(new CustomEvent('orderCountChanged', { detail: pendingCount }))
+    window.dispatchEvent(new CustomEvent('orderAdded', { detail: newOrder }))
     
     // Clear cart and reset payment selection
     setCart([])
@@ -214,7 +261,11 @@ export default function Orders() {
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
                           onClick={() => addToCart(item, qty)}
-                          className="btn-primary px-3 md:px-4 py-2 md:py-2.5 text-sm md:text-base min-h-[44px] shadow-md hover:shadow-lg transition-all"
+                          className={`px-3 md:px-4 py-2 md:py-2.5 text-sm md:text-base min-h-[44px] shadow-md hover:shadow-lg transition-all rounded-lg font-semibold text-white ${
+                            clickedButtons[item.id]
+                              ? 'bg-green-500 hover:bg-green-600'
+                              : 'bg-primary-600 hover:bg-primary-700'
+                          }`}
                         >
                           Add
                         </motion.button>

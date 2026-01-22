@@ -2,33 +2,6 @@ import { useState, useEffect } from 'react'
 import { TrendingUp, ShoppingBag, AlertTriangle, DollarSign } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts'
 
-// Mock data
-const MOCK_STATS = {
-  todaySales: 12500,
-  todayOrders: 28,
-  bestSelling: [
-    { name: 'Sambar', quantity: 15 },
-    { name: 'Rasam', quantity: 12 },
-    { name: 'Vaghali', quantity: 10 },
-    { name: 'Curd Rice', quantity: 8 },
-    { name: 'Lemon Rice', quantity: 6 }
-  ],
-  lowStock: [
-    { name: 'Tamarind', remaining: 2.5, total: 10 },
-    { name: 'Red Chilli', remaining: 1.2, total: 8 }
-  ]
-}
-
-const MOCK_DAILY_SALES = [
-  { date: 'Jan 16', revenue: 9500, orders: 22 },
-  { date: 'Jan 17', revenue: 10200, orders: 24 },
-  { date: 'Jan 18', revenue: 11000, orders: 26 },
-  { date: 'Jan 19', revenue: 10800, orders: 25 },
-  { date: 'Jan 20', revenue: 12000, orders: 27 },
-  { date: 'Jan 21', revenue: 12300, orders: 28 },
-  { date: 'Jan 22', revenue: 12500, orders: 28 }
-]
-
 export default function Dashboard() {
   const [stats, setStats] = useState({
     todaySales: 0,
@@ -40,12 +13,109 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Simulate loading
-    setTimeout(() => {
-      setStats(MOCK_STATS)
-      setDailySalesData(MOCK_DAILY_SALES)
-      setLoading(false)
-    }, 500)
+    // Load data from localStorage
+    const loadDashboardData = () => {
+      try {
+        // Get menu items
+        const menuItemsJson = localStorage.getItem('menuItems')
+        const menuItems = menuItemsJson ? JSON.parse(menuItemsJson) : []
+        
+        // Get orders
+        const ordersJson = localStorage.getItem('orders')
+        const orders = ordersJson ? JSON.parse(ordersJson) : []
+        
+        // Calculate today's date
+        const today = new Date().toISOString().split('T')[0]
+        
+        // Filter today's orders
+        const todayOrders = orders.filter(order => {
+          const orderDate = order.date ? order.date.split('T')[0] : today
+          return orderDate === today
+        })
+        
+        // Calculate today's sales and order count
+        const todaySales = todayOrders.reduce((sum, order) => sum + (order.total || 0), 0)
+        const todayOrderCount = todayOrders.length
+        
+        // Calculate best selling items (from today's orders)
+        const itemSalesMap = {}
+        todayOrders.forEach(order => {
+          if (order.items) {
+            order.items.forEach(item => {
+              itemSalesMap[item.name] = (itemSalesMap[item.name] || 0) + item.quantity
+            })
+          }
+        })
+        
+        const bestSellingItems = Object.entries(itemSalesMap)
+          .map(([name, quantity]) => ({ name, quantity }))
+          .sort((a, b) => b.quantity - a.quantity)
+          .slice(0, 5)
+        
+        // Get low stock items from menu
+        const lowStockItems = menuItems
+          .filter(item => item.stock_qty && item.stock_qty < 10)
+          .map(item => ({
+            name: item.name,
+            remaining: item.stock_qty,
+            total: 20 // Assuming default max stock
+          }))
+        
+        // Generate daily sales data for last 7 days
+        const dailyData = []
+        for (let i = 6; i >= 0; i--) {
+          const date = new Date()
+          date.setDate(date.getDate() - i)
+          const dateStr = date.toISOString().split('T')[0]
+          const dateDisplay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          
+          const dayOrders = orders.filter(order => {
+            const orderDate = order.date ? order.date.split('T')[0] : null
+            return orderDate === dateStr
+          })
+          
+          const dayRevenue = dayOrders.reduce((sum, order) => sum + (order.total || 0), 0)
+          
+          dailyData.push({
+            date: dateDisplay,
+            revenue: dayRevenue,
+            orders: dayOrders.length
+          })
+        }
+        
+        setStats({
+          todaySales: todaySales,
+          todayOrders: todayOrderCount,
+          bestSelling: bestSellingItems.length > 0 ? bestSellingItems : [{ name: 'No sales today', quantity: 0 }],
+          lowStock: lowStockItems
+        })
+        
+        setDailySalesData(dailyData)
+        setLoading(false)
+      } catch (error) {
+        console.error('Error loading dashboard data:', error)
+        setLoading(false)
+      }
+    }
+    
+    loadDashboardData()
+    
+    // Set up listener for data changes
+    const handleStorageChange = () => {
+      loadDashboardData()
+    }
+    
+    window.addEventListener('storage', handleStorageChange)
+    
+    // Also listen for custom events
+    window.addEventListener('orderAdded', handleStorageChange)
+    window.addEventListener('orderCountChanged', handleStorageChange)
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('orderAdded', handleStorageChange)
+      window.removeEventListener('orderCountChanged', handleStorageChange)
+    }
   }, [])
 
   if (loading) {
