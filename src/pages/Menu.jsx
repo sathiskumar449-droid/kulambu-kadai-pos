@@ -3,14 +3,14 @@ import { Plus, Edit2, Trash2, Save, X } from 'lucide-react'
 
 // Mock menu items with stock info
 const MOCK_MENU_ITEMS = [
-  { id: 1, name: 'Sambar', category: 'Curries', price: 120, unit: 'qty', stock_qty: 50, is_enabled: true },
-  { id: 2, name: 'Rasam', category: 'Curries', price: 100, unit: 'qty', stock_qty: 40, is_enabled: true },
-  { id: 3, name: 'Vaghali', category: 'Curries', price: 140, unit: 'qty', stock_qty: 30, is_enabled: true },
-  { id: 4, name: 'Curd Rice', category: 'Rice Dishes', price: 90, unit: 'qty', stock_qty: 60, is_enabled: true },
-  { id: 5, name: 'Lemon Rice', category: 'Rice Dishes', price: 85, unit: 'qty', stock_qty: 55, is_enabled: true },
-  { id: 6, name: 'Butter Rice', category: 'Rice Dishes', price: 95, unit: 'qty', stock_qty: 45, is_enabled: true },
-  { id: 7, name: 'Ghee Puri', category: 'Breads', price: 40, unit: 'qty', stock_qty: 100, is_enabled: true },
-  { id: 8, name: 'Chappati', category: 'Breads', price: 30, unit: 'qty', stock_qty: 150, is_enabled: true }
+  { id: 1, name: 'Sambar', category: 'Curries', price: 120, unit: 'Qty', stock_qty: 50, is_enabled: true },
+  { id: 2, name: 'Rasam', category: 'Curries', price: 100, unit: 'Qty', stock_qty: 40, is_enabled: true },
+  { id: 3, name: 'Vaghali', category: 'Curries', price: 140, unit: 'Qty', stock_qty: 30, is_enabled: true },
+  { id: 4, name: 'Curd Rice', category: 'Rice Dishes', price: 90, unit: 'Qty', stock_qty: 60, is_enabled: true },
+  { id: 5, name: 'Lemon Rice', category: 'Rice Dishes', price: 85, unit: 'Qty', stock_qty: 55, is_enabled: true },
+  { id: 6, name: 'Butter Rice', category: 'Rice Dishes', price: 95, unit: 'Qty', stock_qty: 45, is_enabled: true },
+  { id: 7, name: 'Ghee Puri', category: 'Breads', price: 40, unit: 'Qty', stock_qty: 100, is_enabled: true },
+  { id: 8, name: 'Chappati', category: 'Breads', price: 30, unit: 'Qty', stock_qty: 150, is_enabled: true }
 ]
 
 export default function Menu() {
@@ -22,16 +22,24 @@ export default function Menu() {
     name: '',
     price: '',
     category: '',
-    unit: 'qty',
+    unit: 'Qty',
     stock_qty: '',
     is_enabled: true
   })
+
+  const normalizeUnits = (items) => items.map(item => ({
+    ...item,
+    unit: item.unit === 'qty' ? 'Qty' : item.unit
+  }))
 
   useEffect(() => {
     setTimeout(() => {
       const saved = localStorage.getItem('menuItems')
       if (saved) {
-        setMenuItems(JSON.parse(saved))
+        const parsed = JSON.parse(saved)
+        const normalized = normalizeUnits(parsed)
+        setMenuItems(normalized)
+        localStorage.setItem('menuItems', JSON.stringify(normalized))
       } else {
         setMenuItems(MOCK_MENU_ITEMS)
         localStorage.setItem('menuItems', JSON.stringify(MOCK_MENU_ITEMS))
@@ -41,8 +49,9 @@ export default function Menu() {
   }, [])
 
   const persistItems = (items) => {
-    setMenuItems(items)
-    localStorage.setItem('menuItems', JSON.stringify(items))
+    const normalized = normalizeUnits(items)
+    setMenuItems(normalized)
+    localStorage.setItem('menuItems', JSON.stringify(normalized))
   }
 
   const handleInputChange = (e) => {
@@ -58,7 +67,7 @@ export default function Menu() {
       name: '',
       price: '',
       category: '',
-      unit: 'qty',
+      unit: 'Qty',
       stock_qty: '',
       is_enabled: true
     })

@@ -4,14 +4,14 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 // Mock menu items
 const MOCK_MENU_ITEMS = [
-  { id: 1, name: 'Sambar', category: 'Curries', price: 120, unit: 'qty' },
-  { id: 2, name: 'Rasam', category: 'Curries', price: 100, unit: 'qty' },
-  { id: 3, name: 'Vaghali', category: 'Curries', price: 140, unit: 'qty' },
-  { id: 4, name: 'Curd Rice', category: 'Rice Dishes', price: 90, unit: 'qty' },
-  { id: 5, name: 'Lemon Rice', category: 'Rice Dishes', price: 85, unit: 'qty' },
-  { id: 6, name: 'Butter Rice', category: 'Rice Dishes', price: 95, unit: 'qty' },
-  { id: 7, name: 'Ghee Puri', category: 'Breads', price: 40, unit: 'qty' },
-  { id: 8, name: 'Chappati', category: 'Breads', price: 30, unit: 'qty' }
+  { id: 1, name: 'Sambar', category: 'Curries', price: 120, unit: 'Qty' },
+  { id: 2, name: 'Rasam', category: 'Curries', price: 100, unit: 'Qty' },
+  { id: 3, name: 'Vaghali', category: 'Curries', price: 140, unit: 'Qty' },
+  { id: 4, name: 'Curd Rice', category: 'Rice Dishes', price: 90, unit: 'Qty' },
+  { id: 5, name: 'Lemon Rice', category: 'Rice Dishes', price: 85, unit: 'Qty' },
+  { id: 6, name: 'Butter Rice', category: 'Rice Dishes', price: 95, unit: 'Qty' },
+  { id: 7, name: 'Ghee Puri', category: 'Breads', price: 40, unit: 'Qty' },
+  { id: 8, name: 'Chappati', category: 'Breads', price: 30, unit: 'Qty' }
 ]
 
 export default function Orders() {

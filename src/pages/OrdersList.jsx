@@ -2,57 +2,50 @@ import { useState, useEffect } from 'react'
 import { CheckCircle, Clock, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 
-// Mock orders data
-const MOCK_ORDERS = [
-  {
-    id: 1,
-    orderNumber: 'ORD-20260122001',
-    date: '2026-01-22',
-    time: '10:30 AM',
-    totalAmount: 1240,
-    status: 'pending',
-    items: [
-      { name: 'Sambar', quantity: 2, price: 120, subtotal: 240 },
-      { name: 'Rasam', quantity: 1, price: 100, subtotal: 100 },
-      { name: 'Curd Rice', quantity: 3, price: 90, subtotal: 270 }
-    ]
-  },
-  {
-    id: 2,
-    orderNumber: 'ORD-20260122002',
-    date: '2026-01-22',
-    time: '11:15 AM',
-    totalAmount: 520,
-    status: 'placed',
-    items: [
-      { name: 'Ghee Puri', quantity: 8, price: 40, subtotal: 320 },
-      { name: 'Chappati', quantity: 4, price: 30, subtotal: 120 }
-    ]
-  },
-  {
-    id: 3,
-    orderNumber: 'ORD-20260122003',
-    date: '2026-01-22',
-    time: '12:00 PM',
-    totalAmount: 850,
-    status: 'pending',
-    items: [
-      { name: 'Vaghali', quantity: 2, price: 140, subtotal: 280 },
-      { name: 'Lemon Rice', quantity: 4, price: 85, subtotal: 340 },
-      { name: 'Chappati', quantity: 6, price: 30, subtotal: 180 }
-    ]
-  }
-]
-
 export default function OrdersList() {
-  const [orders, setOrders] = useState(MOCK_ORDERS)
+  const [orders, setOrders] = useState([])
   const [filterStatus, setFilterStatus] = useState('all')
+
+  // Keep badge counts and localStorage in sync when orders change
+  const persistOrders = (updater) => {
+    setOrders(prevOrders => {
+      const nextOrders = typeof updater === 'function' ? updater(prevOrders) : updater
+      localStorage.setItem('orders', JSON.stringify(nextOrders))
+      const pendingCount = nextOrders.filter(o => o.status === 'pending').length
+      window.dispatchEvent(new CustomEvent('orderCountChanged', { detail: pendingCount }))
+      return nextOrders
+    })
+  }
+
+  // Load saved orders once on mount (fallback to empty instead of mocks)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('orders')
+      if (saved) {
+        persistOrders(JSON.parse(saved))
+      }
+    } catch (err) {
+      console.error('Failed to load orders from storage', err)
+    }
+  }, [])
+
+  // Listen for new orders created from the Orders page
+  useEffect(() => {
+    const handleOrderAdded = (event) => {
+      const newOrder = event.detail
+      persistOrders(prevList => {
+        const exists = prevList.some(o => o.orderNumber === newOrder.orderNumber)
+        return exists ? prevList : [...prevList, newOrder]
+      })
+    }
+
+    window.addEventListener('orderAdded', handleOrderAdded)
+    return () => window.removeEventListener('orderAdded', handleOrderAdded)
+  }, [])
 
   // Update badge count when orders change
   const updateOrders = (newOrders) => {
-    setOrders(newOrders)
-    const pendingCount = newOrders.filter(o => o.status === 'pending').length
-    window.dispatchEvent(new CustomEvent('orderCountChanged', { detail: pendingCount }))
+    persistOrders(newOrders)
   }
 
   const markAsPlaced = (orderId) => {
@@ -128,75 +121,78 @@ export default function OrdersList() {
 
       {/* Orders List */}
       <div className="space-y-4">
-        {filteredOrders.map(order => (
-          <div key={order.id} className="card">
-            {/* Order Header */}
-            <div className="flex items-center justify-between mb-4 pb-4 border-b">
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">{order.orderNumber}</h3>
-                <p className="text-sm text-gray-600">
-                  {format(new Date(order.date), 'MMM dd, yyyy')} at {order.time}
-                </p>
+        {filteredOrders.map(order => {
+          const orderTotal = order.totalAmount ?? order.total ?? 0
+          return (
+            <div key={order.id} className="card">
+              {/* Order Header */}
+              <div className="flex items-center justify-between mb-4 pb-4 border-b">
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">{order.orderNumber}</h3>
+                  <p className="text-sm text-gray-600">
+                    {format(new Date(order.date), 'MMM dd, yyyy')} at {order.time}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-2xl font-bold text-primary-600">₹{orderTotal.toFixed(2)}</p>
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold mt-2 ${
+                    order.status === 'pending'
+                      ? 'bg-yellow-100 text-yellow-800'
+                      : 'bg-green-100 text-green-800'
+                  }`}>
+                    {order.status === 'pending' ? (
+                      <>
+                        <Clock className="w-4 h-4 mr-1" />
+                        Pending
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-4 h-4 mr-1" />
+                        Placed
+                      </>
+                    )}
+                  </span>
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-2xl font-bold text-primary-600">₹{order.totalAmount.toFixed(2)}</p>
-                <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold mt-2 ${
-                  order.status === 'pending'
-                    ? 'bg-yellow-100 text-yellow-800'
-                    : 'bg-green-100 text-green-800'
-                }`}>
-                  {order.status === 'pending' ? (
-                    <>
-                      <Clock className="w-4 h-4 mr-1" />
-                      Pending
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="w-4 h-4 mr-1" />
-                      Placed
-                    </>
-                  )}
-                </span>
-              </div>
-            </div>
 
-            {/* Order Items */}
-            <div className="mb-4">
-              <h4 className="text-sm font-semibold text-gray-700 mb-3">Order Items</h4>
-              <div className="space-y-2">
-                {order.items.map((item, idx) => (
-                  <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                    <div className="flex-1">
-                      <p className="font-medium text-gray-900">{item.name}</p>
-                      <p className="text-sm text-gray-600">Qty: {item.quantity} × ₹{item.price}</p>
+              {/* Order Items */}
+              <div className="mb-4">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">Order Items</h4>
+                <div className="space-y-2">
+                  {(order.items ?? []).map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900">{item.name}</p>
+                        <p className="text-sm text-gray-600">Qty: {item.quantity} × ₹{item.price}</p>
+                      </div>
+                      <p className="font-semibold text-gray-900">₹{item.subtotal.toFixed(2)}</p>
                     </div>
-                    <p className="font-semibold text-gray-900">₹{item.subtotal.toFixed(2)}</p>
-                  </div>
-                ))}
+                  ))}
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-4 border-t">
+                {order.status === 'pending' && (
+                  <button
+                    onClick={() => markAsPlaced(order.id)}
+                    className="flex-1 flex items-center justify-center bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
+                  >
+                    <CheckCircle className="w-5 h-5 mr-2" />
+                    Mark as Placed
+                  </button>
+                )}
+                <button
+                  onClick={() => deleteOrder(order.id)}
+                  className="flex items-center justify-center bg-red-100 hover:bg-red-200 text-red-600 font-semibold py-2 px-4 rounded-lg transition-colors"
+                >
+                  <Trash2 className="w-5 h-5 mr-2" />
+                  Delete
+                </button>
               </div>
             </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-2 pt-4 border-t">
-              {order.status === 'pending' && (
-                <button
-                  onClick={() => markAsPlaced(order.id)}
-                  className="flex-1 flex items-center justify-center bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors"
-                >
-                  <CheckCircle className="w-5 h-5 mr-2" />
-                  Mark as Placed
-                </button>
-              )}
-              <button
-                onClick={() => deleteOrder(order.id)}
-                className="flex items-center justify-center bg-red-100 hover:bg-red-200 text-red-600 font-semibold py-2 px-4 rounded-lg transition-colors"
-              >
-                <Trash2 className="w-5 h-5 mr-2" />
-                Delete
-              </button>
-            </div>
-          </div>
-        ))}
+          )
+        })}
 
         {filteredOrders.length === 0 && (
           <div className="card text-center py-12">
