@@ -56,7 +56,7 @@ export default function Layout() {
       {/* Mobile Header */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-white dark:bg-gray-800 shadow-md md:hidden">
         <div className="flex items-center justify-between px-4 py-3">
-          <h1 className="text-xl font-bold text-primary-500 dark:text-primary-400">Kulambu Kadai</h1>
+          <h1 className="text-xl font-bold text-primary-500 dark:text-primary-400">Kulambu Kadai App</h1>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setIsDarkMode(!isDarkMode)}
