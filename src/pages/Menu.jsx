@@ -1,57 +1,57 @@
 import { useState, useEffect } from 'react'
 import { Plus, Edit2, Trash2, Save, X } from 'lucide-react'
+import { convertToTamil } from '../lib/tamilTranslations'
 
-// Mock menu items with stock info
+// Mock menu items (Tamil only)
 const MOCK_MENU_ITEMS = [
-  { id: 1, name: 'Sambar', category: 'Curries', price: 120, unit: 'Qty', stock_qty: 50, is_enabled: true },
-  { id: 2, name: 'Rasam', category: 'Curries', price: 100, unit: 'Qty', stock_qty: 40, is_enabled: true },
-  { id: 3, name: 'Vaghali', category: 'Curries', price: 140, unit: 'Qty', stock_qty: 30, is_enabled: true },
-  { id: 4, name: 'Curd Rice', category: 'Rice Dishes', price: 90, unit: 'Qty', stock_qty: 60, is_enabled: true },
-  { id: 5, name: 'Lemon Rice', category: 'Rice Dishes', price: 85, unit: 'Qty', stock_qty: 55, is_enabled: true },
-  { id: 6, name: 'Butter Rice', category: 'Rice Dishes', price: 95, unit: 'Qty', stock_qty: 45, is_enabled: true },
-  { id: 7, name: 'Ghee Puri', category: 'Breads', price: 40, unit: 'Qty', stock_qty: 100, is_enabled: true },
-  { id: 8, name: 'Chappati', category: 'Breads', price: 30, unit: 'Qty', stock_qty: 150, is_enabled: true }
+  { id: 1, name: 'சாம்பார்', price: 120, unit: 'Qty', stock_qty: 50, is_enabled: true },
+  { id: 2, name: 'ரசம்', price: 100, unit: 'Qty', stock_qty: 40, is_enabled: true },
+  { id: 3, name: 'தயிர் சாதம்', price: 90, unit: 'Qty', stock_qty: 60, is_enabled: true }
 ]
 
 export default function Menu() {
   const [menuItems, setMenuItems] = useState([])
   const [loading, setLoading] = useState(true)
+
+  // modal + edit
+  const [showModal, setShowModal] = useState(false)
   const [editingId, setEditingId] = useState(null)
-  const [showAddForm, setShowAddForm] = useState(false)
+
   const [formData, setFormData] = useState({
     name: '',
     price: '',
-    category: '',
-    unit: 'Qty',
     stock_qty: '',
+    unit: 'Qty',
     is_enabled: true
   })
 
-  const normalizeUnits = (items) => items.map(item => ({
-    ...item,
-    unit: item.unit === 'qty' ? 'Qty' : item.unit
-  }))
-
+  // load menu
   useEffect(() => {
-    setTimeout(() => {
-      const saved = localStorage.getItem('menuItems')
-      if (saved) {
-        const parsed = JSON.parse(saved)
-        const normalized = normalizeUnits(parsed)
-        setMenuItems(normalized)
-        localStorage.setItem('menuItems', JSON.stringify(normalized))
-      } else {
-        setMenuItems(MOCK_MENU_ITEMS)
-        localStorage.setItem('menuItems', JSON.stringify(MOCK_MENU_ITEMS))
-      }
-      setLoading(false)
-    }, 200)
+    const saved = localStorage.getItem('menuItems')
+    if (saved) {
+      setMenuItems(JSON.parse(saved))
+    } else {
+      setMenuItems(MOCK_MENU_ITEMS)
+      localStorage.setItem('menuItems', JSON.stringify(MOCK_MENU_ITEMS))
+    }
+    setLoading(false)
   }, [])
 
   const persistItems = (items) => {
-    const normalized = normalizeUnits(items)
-    setMenuItems(normalized)
-    localStorage.setItem('menuItems', JSON.stringify(normalized))
+    setMenuItems(items)
+    localStorage.setItem('menuItems', JSON.stringify(items))
+  }
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      price: '',
+      stock_qty: '',
+      unit: 'Qty',
+      is_enabled: true
+    })
+    setEditingId(null)
+    setShowModal(false)
   }
 
   const handleInputChange = (e) => {
@@ -62,60 +62,56 @@ export default function Menu() {
     })
   }
 
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      price: '',
-      category: '',
-      unit: 'Qty',
-      stock_qty: '',
-      is_enabled: true
-    })
-    setEditingId(null)
-    setShowAddForm(false)
-  }
-
+  // ADD
   const handleAdd = (e) => {
     e.preventDefault()
 
+    const tamilName = convertToTamil(formData.name)
+
     const newItem = {
-      id: Math.max(...menuItems.map(m => m.id), 0) + 1,
-      ...formData,
-      price: parseFloat(formData.price),
-      stock_qty: parseInt(formData.stock_qty, 10) || 0
+      id: Math.max(0, ...menuItems.map(m => m.id)) + 1,
+      name: tamilName,
+      price: Number(formData.price),
+      stock_qty: Number(formData.stock_qty),
+      unit: 'Qty',
+      is_enabled: formData.is_enabled
     }
 
     persistItems([...menuItems, newItem])
     resetForm()
   }
 
+  // EDIT
   const handleEdit = (item) => {
     setFormData({
       name: item.name,
       price: item.price.toString(),
-      category: item.category,
-      unit: item.unit,
       stock_qty: item.stock_qty.toString(),
+      unit: 'Qty',
       is_enabled: item.is_enabled
     })
     setEditingId(item.id)
-    setShowAddForm(true)
+    setShowModal(true)
   }
 
   const handleUpdate = (e) => {
     e.preventDefault()
 
-    persistItems(menuItems.map(item =>
+    const tamilName = convertToTamil(formData.name)
+
+    const updated = menuItems.map(item =>
       item.id === editingId
         ? {
             ...item,
-            ...formData,
-            price: parseFloat(formData.price),
-            stock_qty: parseInt(formData.stock_qty, 10) || 0
+            name: tamilName,
+            price: Number(formData.price),
+            stock_qty: Number(formData.stock_qty),
+            is_enabled: formData.is_enabled
           }
         : item
-    ))
+    )
 
+    persistItems(updated)
     resetForm()
   }
 
@@ -124,36 +120,74 @@ export default function Menu() {
   }
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-gray-500">Loading menu items...</div>
-      </div>
-    )
+    return <div className="text-gray-500">Loading menu…</div>
   }
 
   return (
     <div className="space-y-6">
+      {/* HEADER */}
       <div className="flex justify-between items-center">
         <h2 className="text-2xl font-bold">Menu Management</h2>
         <button
-          onClick={() => setShowAddForm(!showAddForm)}
+          onClick={() => setShowModal(true)}
           className="btn-primary flex items-center"
         >
-          {showAddForm ? <X className="w-5 h-5 mr-2" /> : <Plus className="w-5 h-5 mr-2" />}
-          {showAddForm ? 'Cancel' : 'Add New Item'}
+          <Plus className="w-5 h-5 mr-2" />
+          Add New Item
         </button>
       </div>
 
-      {showAddForm && (
-        <div className="card">
-          <h3 className="text-lg font-semibold mb-4">
-            {editingId ? 'Edit Menu Item' : 'Add New Menu Item'}
-          </h3>
-          <form onSubmit={editingId ? handleUpdate : handleAdd} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* MENU LIST */}
+      <div className="grid gap-4">
+        {menuItems.map(item => (
+          <div key={item.id} className="card flex justify-between items-center">
+            <div>
+              <h4 className="text-lg font-semibold">{item.name}</h4>
+              <p className="text-sm text-gray-600">
+                ₹{item.price} • Stock: {item.stock_qty}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleEdit(item)}
+                className="p-2 bg-blue-100 text-blue-600 rounded"
+              >
+                <Edit2 className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => handleDelete(item.id)}
+                className="p-2 bg-red-100 text-red-600 rounded"
+              >
+                <Trash2 className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* MODAL */}
+      {showModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white w-full max-w-lg rounded-xl p-6 relative">
+
+            <button
+              onClick={resetForm}
+              className="absolute top-3 right-3 text-gray-500"
+            >
+              <X />
+            </button>
+
+            <h3 className="text-lg font-semibold mb-4">
+              {editingId ? 'Edit Menu Item' : 'Add Menu Item'}
+            </h3>
+
+            <form
+              onSubmit={editingId ? handleUpdate : handleAdd}
+              className="space-y-4"
+            >
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Item Name *
+                <label className="block text-sm mb-1">
+                  Menu Name (English or Tamil)
                 </label>
                 <input
                   type="text"
@@ -162,59 +196,34 @@ export default function Menu() {
                   onChange={handleInputChange}
                   required
                   className="input-field"
+                  placeholder="sambar / சாம்பார்"
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Category *
-                </label>
-                <select
-                  name="category"
-                  value={formData.category}
-                  onChange={handleInputChange}
-                  required
-                  className="input-field"
-                >
-                  <option value="">Select category</option>
-                  <option value="Curries">Curries</option>
-                  <option value="Rice Dishes">Rice Dishes</option>
-                  <option value="Breads">Breads</option>
-                  <option value="Beverages">Beverages</option>
-                  <option value="Others">Others</option>
-                </select>
-              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm mb-1">Price</label>
+                  <input
+                    type="number"
+                    name="price"
+                    value={formData.price}
+                    onChange={handleInputChange}
+                    required
+                    className="input-field"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Price (₹) *
-                </label>
-                <input
-                  type="number"
-                  name="price"
-                  value={formData.price}
-                  onChange={handleInputChange}
-                  required
-                  step="0.01"
-                  min="0"
-                  className="input-field"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Stock Quantity *
-                </label>
-                <input
-                  type="number"
-                  name="stock_qty"
-                  value={formData.stock_qty}
-                  onChange={handleInputChange}
-                  required
-                  step="1"
-                  min="0"
-                  className="input-field"
-                />
+                <div>
+                  <label className="block text-sm mb-1">Stock</label>
+                  <input
+                    type="number"
+                    name="stock_qty"
+                    value={formData.stock_qty}
+                    onChange={handleInputChange}
+                    required
+                    className="input-field"
+                  />
+                </div>
               </div>
 
               <div className="flex items-center">
@@ -223,63 +232,28 @@ export default function Menu() {
                   name="is_enabled"
                   checked={formData.is_enabled}
                   onChange={handleInputChange}
-                  className="w-4 h-4 text-primary-600 rounded"
                 />
-                <label className="ml-2 text-sm font-medium text-gray-700">
-                  Enable Item
-                </label>
+                <span className="ml-2 text-sm">Available Item</span>
               </div>
-            </div>
 
-            <div className="flex gap-2 pt-4">
-              <button
-                type="submit"
-                className="btn-primary flex items-center"
-              >
-                <Save className="w-5 h-5 mr-2" />
-                {editingId ? 'Update Item' : 'Add Item'}
-              </button>
-              <button
-                type="button"
-                onClick={resetForm}
-                className="btn-secondary flex items-center"
-              >
-                <X className="w-5 h-5 mr-2" />
-                Cancel
-              </button>
-            </div>
-          </form>
+              <div className="flex gap-2 pt-4">
+                <button type="submit" className="btn-primary flex items-center">
+                  <Save className="w-5 h-5 mr-2" />
+                  {editingId ? 'Update' : 'Add'}
+                </button>
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="btn-secondary"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+
+          </div>
         </div>
       )}
-
-      <div className="grid gap-4">
-        {menuItems.map(item => (
-          <div key={item.id} className="card">
-            <div className="flex items-center justify-between">
-              <div className="flex-1">
-                <h4 className="text-lg font-semibold text-gray-900">{item.name}</h4>
-                <p className="text-sm text-gray-600">
-                  {item.category} • ₹{item.price} • Stock: {item.stock_qty} {item.unit}
-                </p>
-              </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleEdit(item)}
-                  className="p-2 bg-blue-100 hover:bg-blue-200 text-blue-600 rounded-lg transition-colors"
-                >
-                  <Edit2 className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => handleDelete(item.id)}
-                  className="p-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-lg transition-colors"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
   )
 }

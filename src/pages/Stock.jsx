@@ -4,14 +4,14 @@ import { format } from 'date-fns'
 
 // Mock menu items with stock info (shared with Menu.jsx)
 const MOCK_MENU_ITEMS = [
-  { id: 1, name: 'Sambar', category: 'Curries', price: 120, unit: 'Qty', stock_qty: 50, is_enabled: true },
-  { id: 2, name: 'Rasam', category: 'Curries', price: 100, unit: 'Qty', stock_qty: 40, is_enabled: true },
-  { id: 3, name: 'Vaghali', category: 'Curries', price: 140, unit: 'Qty', stock_qty: 30, is_enabled: true },
-  { id: 4, name: 'Curd Rice', category: 'Rice Dishes', price: 90, unit: 'Qty', stock_qty: 60, is_enabled: true },
-  { id: 5, name: 'Lemon Rice', category: 'Rice Dishes', price: 85, unit: 'Qty', stock_qty: 55, is_enabled: true },
-  { id: 6, name: 'Butter Rice', category: 'Rice Dishes', price: 95, unit: 'Qty', stock_qty: 45, is_enabled: true },
-  { id: 7, name: 'Ghee Puri', category: 'Breads', price: 40, unit: 'Qty', stock_qty: 100, is_enabled: true },
-  { id: 8, name: 'Chappati', category: 'Breads', price: 30, unit: 'Qty', stock_qty: 150, is_enabled: true }
+  { id: 1, name: 'சாம்பார்', price: 120, unit: 'Qty', stock_qty: 50, is_enabled: true },
+  { id: 2, name: 'ரசம்', price: 100, unit: 'Qty', stock_qty: 40, is_enabled: true },
+  { id: 3, name: 'புளி குழம்பு', price: 140, unit: 'Qty', stock_qty: 30, is_enabled: true },
+  { id: 4, name: 'தயிர் சாதம்', price: 90, unit: 'Qty', stock_qty: 60, is_enabled: true },
+  { id: 5, name: 'எலுமிச்சை சாதம்', price: 85, unit: 'Qty', stock_qty: 55, is_enabled: true },
+  { id: 6, name: 'சாப்பாடு', price: 95, unit: 'Qty', stock_qty: 45, is_enabled: true },
+  { id: 7, name: 'நெய் சாதம்', price: 40, unit: 'Qty', stock_qty: 100, is_enabled: true },
+  { id: 8, name: 'சப்பாத்தி', price: 30, unit: 'Qty', stock_qty: 150, is_enabled: true }
 ]
 
 export default function Stock() {
@@ -90,9 +90,6 @@ export default function Stock() {
                 Item Name
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Category
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Price
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -116,9 +113,6 @@ export default function Stock() {
                 <tr key={item.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="font-medium text-gray-900">{item.name}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">{item.category}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-semibold text-gray-900">

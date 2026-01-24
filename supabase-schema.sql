@@ -9,13 +9,15 @@ CREATE TABLE menu_items (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name VARCHAR(255) NOT NULL,
   price DECIMAL(10, 2) NOT NULL,
-  category VARCHAR(100),
   daily_stock_quantity DECIMAL(10, 2) DEFAULT 0,
   unit VARCHAR(50) DEFAULT 'litres',
   is_enabled BOOLEAN DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Note: 'name' stores Tamil menu item names only.
+-- English input is auto-converted to Tamil in the frontend before saving.
 
 -- Orders Table
 CREATE TABLE orders (
@@ -183,19 +185,19 @@ CREATE POLICY "Enable insert for all users" ON daily_sales_summary FOR INSERT WI
 CREATE POLICY "Enable update for all users" ON daily_sales_summary FOR UPDATE USING (true);
 
 -- Insert sample menu items
-INSERT INTO menu_items (name, price, category, daily_stock_quantity, unit) VALUES
-('Sambar', 40.00, 'Gravy', 20, 'litres'),
-('Rasam', 30.00, 'Gravy', 15, 'litres'),
-('Chicken Kulambu', 120.00, 'Non-Veg', 10, 'litres'),
-('Mutton Kulambu', 180.00, 'Non-Veg', 8, 'litres'),
-('Fish Kulambu', 150.00, 'Non-Veg', 10, 'litres'),
-('Poriyal', 40.00, 'Side Dish', 5, 'kg'),
-('Kootu', 45.00, 'Side Dish', 5, 'kg'),
-('Appalam', 10.00, 'Side Dish', 100, 'pieces'),
-('Curd Rice', 50.00, 'Rice', 10, 'kg'),
-('White Rice', 30.00, 'Rice', 20, 'kg'),
-('Lemon Rice', 60.00, 'Rice', 5, 'kg'),
-('Tamarind Rice', 60.00, 'Rice', 5, 'kg');
+INSERT INTO menu_items (name, price, daily_stock_quantity, unit) VALUES
+('Sambar', 40.00, 20, 'litres'),
+('Rasam', 30.00, 15, 'litres'),
+('Chicken Kulambu', 120.00, 10, 'litres'),
+('Mutton Kulambu', 180.00, 8, 'litres'),
+('Fish Kulambu', 150.00, 10, 'litres'),
+('Poriyal', 40.00, 5, 'kg'),
+('Kootu', 45.00, 5, 'kg'),
+('Appalam', 10.00, 100, 'pieces'),
+('Curd Rice', 50.00, 10, 'kg'),
+('White Rice', 30.00, 20, 'kg'),
+('Lemon Rice', 60.00, 5, 'kg'),
+('Tamarind Rice', 60.00, 5, 'kg');
 
 -- Initialize stock logs for today
 INSERT INTO stock_logs (menu_item_id, date, prepared_quantity, sold_quantity, remaining_quantity)
