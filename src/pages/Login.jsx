@@ -92,21 +92,10 @@ export default function Login() {
         </form>
 
         {/* 📝 CREDENTIALS HINT */}
-        <div className="bg-yellow-50 p-3 rounded mb-4 text-xs text-gray-700">
-          <p className="font-semibold mb-1">Test Credentials:</p>
+        <div className="bg-yellow-50 p-3 rounded text-xs text-gray-700">
+          <p className="font-semibold mb-1">Credentials:</p>
           <p>Admin: admin / admin123</p>
           <p>Staff: staff / staff123</p>
-        </div>
-
-        <div className="border-t pt-4 mt-4">
-          <p className="text-sm text-gray-500 mb-3">Or login with Google</p>
-
-          <button
-            onClick={handleLogin}
-            className="w-full bg-orange-500 text-white py-2 rounded hover:bg-orange-600"
-          >
-            Google Login
-          </button>
         </div>
       </div>
     </div>
