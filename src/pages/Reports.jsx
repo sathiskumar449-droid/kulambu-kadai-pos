@@ -204,8 +204,18 @@ export default function Reports() {
       ? reportData.ordersDetail.filter(o => new Date(o.created_at).getHours() >= 17)
       : reportData.ordersDetail
 
+    // Helper function to determine shift
+    const getShift = (dateTime) => {
+      const hour = new Date(dateTime).getHours()
+      if (hour < 17) {
+        return 'Shift 1 (Until 5 PM)'
+      } else {
+        return 'Shift 2 (After 5 PM)'
+      }
+    }
+
     const csvRows = [
-      ['வரிசை எண்', 'Item Name (Tamil)', 'Quantity', 'Unit Price', 'Total', 'Payment Method', 'Order Time', 'Date'],
+      ['S.No', 'Item Name (Tamil)', 'Quantity', 'Unit Price (₹)', 'Total (₹)', 'Payment Method', 'Shift', 'Order Time', 'Date'],
       ...ordersToExport.flatMap((order, orderIdx) => 
         order.order_items.map((item, itemIdx) => [
           orderIdx + 1,
@@ -213,8 +223,9 @@ export default function Reports() {
           item.quantity,
           item.price.toFixed(2),
           item.subtotal.toFixed(2),
-          order.payment_method === 'cash' ? 'நகது (Cash)' : 'ஆன்லைன் (Online)',
-          format(new Date(order.created_at), 'HH:mm:ss'),
+          order.payment_method === 'cash' ? 'Cash (நகது)' : 'Online (ஆன்லைன்)',
+          getShift(order.created_at),
+          format(new Date(order.created_at), 'hh:mm a'),
           format(new Date(order.created_at), 'dd-MM-yyyy')
         ])
       )
@@ -224,7 +235,9 @@ export default function Reports() {
       row.map(cell => `"${cell}"`).join(',')
     ).join('\n')
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    // Add UTF-8 BOM for proper Tamil character display in Excel
+    const BOM = '\uFEFF'
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' })
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
