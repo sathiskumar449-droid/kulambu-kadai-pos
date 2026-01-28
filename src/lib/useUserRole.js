@@ -1,23 +1,52 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect } from "react"
+import { supabase } from "./supabase"
 
 export function useUserRole() {
-  const [role, setRole] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [role, setRole] = useState(null)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // 🔥 LOCAL DEV ROLE
-    if (import.meta.env.DEV) {
-      const devRole = localStorage.getItem("dev_role");
-      if (devRole) {
-        setRole(devRole);
-        setLoading(false);
-        return;
+    const checkAuth = async () => {
+      try {
+        // 🔥 DEV MODE - read from localStorage
+        const devRole = localStorage.getItem("dev_role")
+        if (devRole) {
+          setRole(devRole)
+          setLoading(false)
+          return
+        }
+
+        // 🔐 PRODUCTION - read from Supabase auth
+        const { data: { user }, error } = await supabase.auth.getUser()
+        
+        if (error || !user) {
+          setRole(null)
+          setLoading(false)
+          return
+        }
+
+        // Get role from user_roles table
+        const { data: userRole, error: roleError } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id)
+          .single()
+
+        if (roleError || !userRole) {
+          setRole(null)
+        } else {
+          setRole(userRole.role)
+        }
+      } catch (err) {
+        console.error("Auth check failed:", err)
+        setRole(null)
+      } finally {
+        setLoading(false)
       }
     }
 
-    // No role, still loading
-    setLoading(false);
-  }, []);
+    checkAuth()
+  }, [])
 
-  return { role, loading };
+  return { role, loading }
 }
