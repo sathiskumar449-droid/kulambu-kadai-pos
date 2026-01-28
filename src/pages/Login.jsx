@@ -2,6 +2,12 @@ import { useEffect, useState } from "react"
 
 export default function Login() {
 
+  // � CHANGE YOUR CREDENTIALS HERE
+  const ADMIN_USERNAME = "admin"
+  const ADMIN_PASSWORD = "admin123"
+  const STAFF_USERNAME = "staff"
+  const STAFF_PASSWORD = "staff123"
+
   // 🔥 Form state
   const [username, setUsername] = useState("")
   const [password, setPassword] = useState("")
@@ -20,14 +26,14 @@ export default function Login() {
     setLoading(true)
 
     // Admin credentials
-    if (username === "admin" && password === "admin123") {
+    if (username === ADMIN_USERNAME && password === ADMIN_PASSWORD) {
       localStorage.setItem("user_role", "admin")
       window.location.href = "/"
       return
     }
 
     // Staff credentials
-    if (username === "staff" && password === "staff123") {
+    if (username === STAFF_USERNAME && password === STAFF_PASSWORD) {
       localStorage.setItem("user_role", "staff")
       window.location.href = "/"
       return
@@ -74,8 +80,8 @@ export default function Login() {
         {/* 📝 CREDENTIALS HINT */}
         <div className="bg-yellow-50 p-3 rounded text-xs text-gray-700">
           <p className="font-semibold mb-1">Credentials:</p>
-          <p>Admin: admin / admin123</p>
-          <p>Staff: staff / staff123</p>
+          <p>Admin: {ADMIN_USERNAME} / {ADMIN_PASSWORD}</p>
+          <p>Staff: {STAFF_USERNAME} / {STAFF_PASSWORD}</p>
         </div>
       </div>
     </div>
