@@ -1,10 +1,16 @@
 import { supabase } from "../lib/supabase"
-import { useEffect } from "react"
+import { useEffect, useState } from "react"
 
 export default function Login() {
 
   // 🔥 ENV CHECK
   const DEV_MODE = import.meta.env.DEV
+
+  // 🔥 Form state
+  const [username, setUsername] = useState("")
+  const [password, setPassword] = useState("")
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
 
   // 🔥 Clear dev role ONLY in local
   useEffect(() => {
@@ -13,10 +19,28 @@ export default function Login() {
     }
   }, [DEV_MODE])
 
-  // 🔥 DEV LOGIN (LOCAL TESTING)
-  function devLogin(role) {
-    localStorage.setItem("dev_role", role)
-    window.location.href = "/"
+  // 🔥 FORM LOGIN
+  const handleFormLogin = async (e) => {
+    e.preventDefault()
+    setError("")
+    setLoading(true)
+
+    // Admin credentials
+    if (username === "admin" && password === "admin123") {
+      localStorage.setItem("dev_role", "admin")
+      window.location.href = "/"
+      return
+    }
+
+    // Staff credentials
+    if (username === "staff" && password === "staff123") {
+      localStorage.setItem("dev_role", "staff")
+      window.location.href = "/"
+      return
+    }
+
+    setError("Invalid username or password")
+    setLoading(false)
   }
 
   // 🔐 GOOGLE LOGIN (LIVE)
@@ -35,25 +59,43 @@ export default function Login() {
 
   return (
     <div className="h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded shadow w-80 text-center">
+      <div className="bg-white p-8 rounded shadow w-96 text-center">
         <h1 className="text-2xl font-bold mb-4">Kulambu Kadai</h1>
-        <p className="mb-6 text-gray-600">Login</p>
+        <p className="mb-6 text-gray-600">POS System</p>
 
-        {/* 🟢 LOCAL TESTING - ALWAYS SHOW */}
-        <div className="space-y-2 mb-4">
+        {/* 🔑 FORM LOGIN */}
+        <form onSubmit={handleFormLogin} className="space-y-4 mb-6">
+          <input
+            type="text"
+            placeholder="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+            required
+          />
+          {error && <p className="text-red-500 text-sm">{error}</p>}
           <button
-            onClick={() => devLogin("admin")}
-            className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700"
+            type="submit"
+            disabled={loading}
+            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:opacity-50"
           >
-            Test as Admin
+            {loading ? "Logging in..." : "Login"}
           </button>
+        </form>
 
-          <button
-            onClick={() => devLogin("staff")}
-            className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
-          >
-            Test as Staff
-          </button>
+        {/* 📝 CREDENTIALS HINT */}
+        <div className="bg-yellow-50 p-3 rounded mb-4 text-xs text-gray-700">
+          <p className="font-semibold mb-1">Test Credentials:</p>
+          <p>Admin: admin / admin123</p>
+          <p>Staff: staff / staff123</p>
         </div>
 
         <div className="border-t pt-4 mt-4">
