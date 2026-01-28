@@ -10,7 +10,7 @@ import {
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { convertToTamil } from '../lib/tamilTranslations'
-import { playNotificationSound } from '../utils/notifications'
+import { triggerOrderNotification, requestNotificationPermission } from '../utils/notifications'
 
 export default function Menu() {
   const [menuItems, setMenuItems] = useState([])
@@ -26,6 +26,9 @@ export default function Menu() {
 
   /* ================= MENU LOAD (SUPABASE) ================= */
   useEffect(() => {
+    // 🔔 Request notification permission on mount
+    requestNotificationPermission()
+    
     fetchMenu()
   }, [])
 
@@ -156,8 +159,8 @@ export default function Menu() {
       const { error: itemsError } = await supabase.from('order_items').insert(itemsPayload)
       if (itemsError) throw itemsError
 
-      // Play notification sound
-      playNotificationSound()
+      // 🔔 Trigger notification sound and browser notification
+      triggerOrderNotification(orderNumber)
 
       setCart([])
       setSelectedPayment(null)
