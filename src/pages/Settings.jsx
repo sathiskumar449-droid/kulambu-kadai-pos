@@ -16,7 +16,7 @@ export default function Settings() {
     name: '',
     price: '',
     stock_qty: '',
-    unit: 'Qty',
+    unit: 'bowl',
     is_enabled: true
   })
 
@@ -50,7 +50,7 @@ export default function Settings() {
       name: '',
       price: '',
       stock_qty: '',
-      unit: 'Qty',
+      unit: 'bowl',
       is_enabled: true
     })
     setEditingId(null)
@@ -77,7 +77,7 @@ export default function Settings() {
         name: tamilName,
         price: Number(formData.price),
         daily_stock_quantity: Number(formData.stock_qty),
-        unit: formData.unit || 'Qty',
+        unit: formData.unit || 'bowl',
         is_enabled: formData.is_enabled
       }])
 
@@ -96,7 +96,7 @@ export default function Settings() {
       name: item.name,
       price: item.price?.toString() || '',
       stock_qty: (item.daily_stock_quantity ?? '').toString(),
-      unit: item.unit || 'Qty',
+      unit: item.unit || 'bowl',
       is_enabled: item.is_enabled
     })
     setEditingId(item.id)
@@ -116,7 +116,7 @@ export default function Settings() {
           name: tamilName,
           price: Number(formData.price),
           daily_stock_quantity: Number(formData.stock_qty),
-          unit: formData.unit || 'Qty',
+          unit: formData.unit || 'bowl',
           is_enabled: formData.is_enabled
         })
         .eq('id', editingId)
@@ -258,14 +258,21 @@ export default function Settings() {
 
                 <div>
                   <label className="block text-sm mb-1">Unit</label>
-                  <input
-                    type="text"
+                  <select
                     name="unit"
                     value={formData.unit}
                     onChange={handleInputChange}
                     className="input-field"
-                    placeholder="Qty / kg / litres"
-                  />
+                  >
+                    <option value="bowl">Bowl</option>
+                    <option value="piece">Piece</option>
+                    <option value="pieces">Pieces</option>
+                    <option value="serving">Serving</option>
+                    <option value="litres">Litres</option>
+                    <option value="kg">KG</option>
+                    <option value="cup">Cup</option>
+                    <option value="plate">Plate</option>
+                  </select>
                 </div>
               </div>
 
