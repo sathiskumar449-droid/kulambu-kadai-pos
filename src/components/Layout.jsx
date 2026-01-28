@@ -22,7 +22,6 @@ export default function Layout() {
   const { role, loading } = useUserRole()
 
   const [orderCount, setOrderCount] = useState(0)
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isDarkMode, setIsDarkMode] = useState(false)
 
   /* ---------------- ORDERS BADGE ---------------- */
@@ -156,75 +155,44 @@ export default function Layout() {
   }
 
   return (
-    <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
+    <div className="flex h-screen bg-gray-100 dark:bg-gray-900 flex-col md:flex-row">
 
-      {/* MOBILE HEADER */}
-      <div className="fixed top-0 left-0 right-0 z-50 md:hidden bg-white dark:bg-gray-800 shadow">
+      {/* MOBILE HEADER - TOP */}
+      <div className="fixed top-0 left-0 right-0 z-40 md:hidden bg-white dark:bg-gray-800 shadow">
         <div className="flex justify-between items-center px-4 py-3">
           <h1 className="font-bold text-orange-500">Kulambu Kadai</h1>
-          <div className="flex gap-2">
-            <button onClick={() => setIsDarkMode(!isDarkMode)}>
-              {isDarkMode ? <Sun /> : <Moon />}
-            </button>
-            <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-              {isMobileMenuOpen ? <X /> : <MenuIcon />}
-            </button>
-          </div>
+          <button onClick={() => setIsDarkMode(!isDarkMode)}>
+            {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
         </div>
       </div>
 
-      {/* MOBILE SIDEBAR */}
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <>
-            <div
-              className="fixed inset-0 bg-black/40 z-40"
-              onClick={() => setIsMobileMenuOpen(false)}
-            />
-            <motion.div
-              initial={{ x: '-100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
-              className="fixed z-50 top-0 left-0 w-64 h-full bg-white dark:bg-gray-800"
+      {/* MOBILE BOTTOM NAVIGATION */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white dark:bg-gray-800 shadow-2xl border-t border-gray-200 dark:border-gray-700">
+        <nav className="flex justify-around items-center">
+          {navigation.map(item => (
+            <NavLink
+              key={item.name}
+              to={item.to}
+              className={({ isActive }) =>
+                `flex flex-col items-center justify-center py-3 px-2 flex-1 text-xs relative transition-colors ${
+                  isActive
+                    ? 'bg-orange-50 dark:bg-gray-700 text-orange-500 border-t-2 border-orange-500'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-orange-500'
+                }`
+              }
             >
-              <nav className="p-4 space-y-2 flex flex-col h-full">
-                <div className="flex-1 space-y-2">
-                  {navigation.map(item => (
-                    <NavLink
-                      key={item.name}
-                      to={item.to}
-                      onClick={() => setIsMobileMenuOpen(false)}
-                      className={({ isActive }) =>
-                        `flex items-center gap-3 p-3 rounded ${
-                          isActive
-                            ? 'bg-orange-500 text-white'
-                            : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-                        }`
-                      }
-                    >
-                      <item.icon size={18} />
-                      {item.name}
-                      {item.badge !== undefined && item.badge >= 0 && (
-                        <span className="ml-auto bg-red-500 text-white text-xs px-2 py-1 rounded-full min-w-[20px] text-center">
-                          {item.badge}
-                        </span>
-                      )}
-                    </NavLink>
-                  ))}
-                </div>
-                {/* LOGOUT BUTTON */}
-                <button
-                  onClick={handleLogout}
-                  className="flex items-center gap-3 p-3 rounded bg-red-500 text-white hover:bg-red-600"
-                >
-                  <LogOut size={18} />
-                  Logout
-                </button>
-              </nav>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+              <item.icon size={24} className="mb-1" />
+              <span className="text-center">{item.name}</span>
+              {item.badge !== undefined && item.badge > 0 && (
+                <span className="absolute top-1 right-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                  {item.badge}
+                </span>
+              )}
+            </NavLink>
+          ))}
+        </nav>
+      </div>
 
       {/* DESKTOP SIDEBAR */}
       <div className="hidden md:flex md:flex-col w-64 bg-white dark:bg-gray-800 shadow">
@@ -267,8 +235,19 @@ export default function Layout() {
       </div>
 
       {/* MAIN CONTENT */}
-      <div className="flex-1 overflow-auto pt-16 md:pt-0">
+      <div className="flex-1 overflow-auto pt-16 md:pt-0 pb-20 md:pb-0">
         <Outlet />
+      </div>
+
+      {/* MOBILE LOGOUT (bottom right corner for mobile) */}
+      <div className="fixed bottom-20 right-4 md:hidden">
+        <button
+          onClick={handleLogout}
+          className="flex items-center justify-center gap-2 p-3 rounded-full bg-red-500 text-white hover:bg-red-600 shadow-lg"
+          title="Logout"
+        >
+          <LogOut size={20} />
+        </button>
       </div>
     </div>
   )
