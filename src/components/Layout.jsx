@@ -9,7 +9,8 @@ import {
   Menu as MenuIcon,
   X,
   Moon,
-  Sun
+  Sun,
+  LogOut
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -72,6 +73,11 @@ export default function Layout() {
     ? allNavigation.filter(item => item.roles.includes(role))
     : allNavigation
 
+  /* ---------------- LOGOUT ---------------- */
+  const handleLogout = () => {
+    localStorage.removeItem("user_role")
+    window.location.href = "/login"
+  }
 
   if (loading) {
     return (
@@ -117,24 +123,34 @@ export default function Layout() {
               exit={{ x: '-100%' }}
               className="fixed z-50 top-0 left-0 w-64 h-full bg-white dark:bg-gray-800"
             >
-              <nav className="p-4 space-y-2">
-                {navigation.map(item => (
-                  <NavLink
-                    key={item.name}
-                    to={item.to}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 p-3 rounded ${
-                        isActive
-                          ? 'bg-orange-500 text-white'
-                          : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-                      }`
-                    }
-                  >
-                    <item.icon size={18} />
-                    {item.name}
-                  </NavLink>
-                ))}
+              <nav className="p-4 space-y-2 flex flex-col h-full">
+                <div className="flex-1 space-y-2">
+                  {navigation.map(item => (
+                    <NavLink
+                      key={item.name}
+                      to={item.to}
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 p-3 rounded ${
+                          isActive
+                            ? 'bg-orange-500 text-white'
+                            : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                        }`
+                      }
+                    >
+                      <item.icon size={18} />
+                      {item.name}
+                    </NavLink>
+                  ))}
+                </div>
+                {/* LOGOUT BUTTON */}
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-3 p-3 rounded bg-red-500 text-white hover:bg-red-600"
+                >
+                  <LogOut size={18} />
+                  Logout
+                </button>
               </nav>
             </motion.div>
           </>
@@ -146,28 +162,38 @@ export default function Layout() {
         <div className="p-4 font-bold text-white bg-orange-500">
           Kulambu Kadai
         </div>
-        <nav className="p-4 space-y-2">
-          {navigation.map(item => (
-            <NavLink
-              key={item.name}
-              to={item.to}
-              className={({ isActive }) =>
-                `flex items-center gap-3 p-3 rounded ${
-                  isActive
-                    ? 'bg-orange-500 text-white'
-                    : 'hover:bg-gray-100 dark:hover:bg-gray-700'
-                }`
-              }
-            >
-              <item.icon size={18} />
-              {item.name}
-              {item.badge > 0 && (
-                <span className="ml-auto bg-red-500 text-white text-xs px-2 rounded">
-                  {item.badge}
-                </span>
-              )}
-            </NavLink>
-          ))}
+        <nav className="p-4 space-y-2 flex flex-col flex-1">
+          <div className="flex-1 space-y-2">
+            {navigation.map(item => (
+              <NavLink
+                key={item.name}
+                to={item.to}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 p-3 rounded ${
+                    isActive
+                      ? 'bg-orange-500 text-white'
+                      : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                  }`
+                }
+              >
+                <item.icon size={18} />
+                {item.name}
+                {item.badge > 0 && (
+                  <span className="ml-auto bg-red-500 text-white text-xs px-2 rounded">
+                    {item.badge}
+                  </span>
+                )}
+              </NavLink>
+            ))}
+          </div>
+          {/* LOGOUT BUTTON */}
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 p-3 rounded bg-red-500 text-white hover:bg-red-600 mt-auto"
+          >
+            <LogOut size={18} />
+            Logout
+          </button>
         </nav>
       </div>
 
