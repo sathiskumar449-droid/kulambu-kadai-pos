@@ -1,10 +1,6 @@
-import { supabase } from "../lib/supabase"
 import { useEffect, useState } from "react"
 
 export default function Login() {
-
-  // 🔥 ENV CHECK
-  const DEV_MODE = import.meta.env.DEV
 
   // 🔥 Form state
   const [username, setUsername] = useState("")
@@ -12,12 +8,10 @@ export default function Login() {
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
 
-  // 🔥 Clear dev role ONLY in local
+  // 🔥 Clear role on mount
   useEffect(() => {
-    if (DEV_MODE) {
-      localStorage.removeItem("dev_role")
-    }
-  }, [DEV_MODE])
+    localStorage.removeItem("user_role")
+  }, [])
 
   // 🔥 FORM LOGIN
   const handleFormLogin = async (e) => {
@@ -27,34 +21,20 @@ export default function Login() {
 
     // Admin credentials
     if (username === "admin" && password === "admin123") {
-      localStorage.setItem("dev_role", "admin")
+      localStorage.setItem("user_role", "admin")
       window.location.href = "/"
       return
     }
 
     // Staff credentials
     if (username === "staff" && password === "staff123") {
-      localStorage.setItem("dev_role", "staff")
+      localStorage.setItem("user_role", "staff")
       window.location.href = "/"
       return
     }
 
     setError("Invalid username or password")
     setLoading(false)
-  }
-
-  // 🔐 GOOGLE LOGIN (LIVE)
-  const handleLogin = async () => {
-    const redirectUrl = DEV_MODE 
-      ? "http://localhost:3002/auth/callback" 
-      : "https://kulambukadipos.vercel.app/auth/callback"
-    
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: redirectUrl
-      }
-    })
   }
 
   return (

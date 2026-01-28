@@ -8,20 +8,15 @@ export function useUserRole() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // 🔥 DEV MODE ONLY - read from localStorage
-        if (import.meta.env.DEV) {
-          const devRole = localStorage.getItem("dev_role")
-          if (devRole) {
-            setRole(devRole)
-            setLoading(false)
-            return
-          }
-        } else {
-          // 🔐 PRODUCTION - always clear any dev_role
-          localStorage.removeItem("dev_role")
+        // 🔥 Check localStorage first (form login)
+        const storedRole = localStorage.getItem("user_role")
+        if (storedRole) {
+          setRole(storedRole)
+          setLoading(false)
+          return
         }
 
-        // 🔐 PRODUCTION - read from Supabase auth
+        // 🔐 Check Supabase auth (Google login - future use)
         const { data: { user }, error } = await supabase.auth.getUser()
         
         if (error || !user) {
