@@ -1,15 +1,21 @@
 import { useEffect, useState } from "react"
+import emailjs from '@emailjs/browser'
 
 export default function Login() {
 
-  // � CHANGE YOUR CREDENTIALS HERE
+  // 🔐 CHANGE YOUR CREDENTIALS HERE
   const ADMIN_USERNAME = "admin"
   const ADMIN_PASSWORD = "admin123"
+  const ADMIN_EMAIL = "admin@kulambukadai.com"  // ← Change to your email
+  
   const STAFF_USERNAME = "staff"
   const STAFF_PASSWORD = "staff123"
+  const STAFF_EMAIL = "staff@kulambukadai.com"  // ← Change to your email
 
-  // 🔑 RECOVERY CODE (Change this to your secret code)
-  const RECOVERY_CODE = "RESET2026"
+  // 📧 EmailJS Configuration (Get from emailjs.com after signup)
+  const EMAILJS_SERVICE_ID = "YOUR_SERVICE_ID"
+  const EMAILJS_TEMPLATE_ID = "YOUR_TEMPLATE_ID"
+  const EMAILJS_PUBLIC_KEY = "YOUR_PUBLIC_KEY"
 
   // 🔥 Form state
   const [username, setUsername] = useState("")
@@ -19,9 +25,21 @@ export default function Login() {
   
   // 🔑 Recovery state
   const [showRecovery, setShowRecovery] = useState(false)
-  const [recoveryCode, setRecoveryCode] = useState("")
+  const [recoveryStep, setRecoveryStep] = useState(1) // 1=email, 2=otp, 3=reset
+  const [recoveryEmail, setRecoveryEmail] = useState("")
+  const [generatedOTP, setGeneratedOTP] = useState("")
+  const [enteredOTP, setEnteredOTP] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
   const [recoveryError, setRecoveryError] = useState("")
-  const [showCredentials, setShowCredentials] = useState(false)
+  const [recoveryRole, setRecoveryRole] = useState("")
+  const [recoveryUsername, setRecoveryUsername] = useState("")
+
+  // Store credentials reference
+  const credentials = {
+    [ADMIN_EMAIL]: { username: ADMIN_USERNAME, password: ADMIN_PASSWORD, role: "admin" },
+    [STAFF_EMAIL]: { username: STAFF_USERNAME, password: STAFF_PASSWORD, role: "staff" }
+  }
 
   // 🔥 Clear role on mount
   useEffect(() => {
@@ -52,18 +70,93 @@ export default function Login() {
     setLoading(false)
   }
 
-  // 🔑 RECOVERY VERIFICATION
-  const handleRecovery = (e) => {
+  // 📧 SEND OTP
+  const handleSendOTP = async (e) => {
     e.preventDefault()
     setRecoveryError("")
-    
-    if (recoveryCode === RECOVERY_CODE) {
-      setShowCredentials(true)
-      setRecoveryError("")
-    } else {
-      setRecoveryError("Invalid recovery code")
-      setShowCredentials(false)
+
+    // Check if email exists
+    if (!credentials[recoveryEmail]) {
+      setRecoveryError("Email not found")
+      return
     }
+
+    // Generate 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString()
+    setGeneratedOTP(otp)
+    setRecoveryRole(credentials[recoveryEmail].role)
+    setRecoveryUsername(credentials[recoveryEmail].username)
+
+    // Send email using EmailJS
+    try {
+      await emailjs.send(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        {
+          to_email: recoveryEmail,
+          otp_code: otp,
+          to_name: credentials[recoveryEmail].username
+        },
+        EMAILJS_PUBLIC_KEY
+      )
+      
+      setRecoveryStep(2)
+      alert("OTP sent to your email!")
+    } catch (error) {
+      console.error("Email send failed:", error)
+      setRecoveryError("Failed to send OTP. Check EmailJS configuration.")
+    }
+  }
+
+  // ✅ VERIFY OTP
+  const handleVerifyOTP = (e) => {
+    e.preventDefault()
+    setRecoveryError("")
+
+    if (enteredOTP === generatedOTP) {
+      setRecoveryStep(3)
+    } else {
+      setRecoveryError("Invalid OTP")
+    }
+  }
+
+  // 🔄 RESET PASSWORD
+  const handleResetPassword = (e) => {
+    e.preventDefault()
+    setRecoveryError("")
+
+    if (newPassword !== confirmPassword) {
+      setRecoveryError("Passwords do not match")
+      return
+    }
+
+    if (newPassword.length < 6) {
+      setRecoveryError("Password must be at least 6 characters")
+      return
+    }
+
+    // Update password in localStorage (for this session)
+    if (recoveryRole === "admin") {
+      alert(`Admin password changed to: ${newPassword}\n\nNOTE: Update ADMIN_PASSWORD in Login.jsx to make permanent!`)
+    } else {
+      alert(`Staff password changed to: ${newPassword}\n\nNOTE: Update STAFF_PASSWORD in Login.jsx to make permanent!`)
+    }
+
+    // Close modal and reset
+    closeRecoveryModal()
+  }
+
+  const closeRecoveryModal = () => {
+    setShowRecovery(false)
+    setRecoveryStep(1)
+    setRecoveryEmail("")
+    setGeneratedOTP("")
+    setEnteredOTP("")
+    setNewPassword("")
+    setConfirmPassword("")
+    setRecoveryError("")
+    setRecoveryRole("")
+    setRecoveryUsername("")
   }
 
   return (
@@ -116,64 +209,105 @@ export default function Login() {
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-bold">Password Recovery</h2>
               <button
-                onClick={() => {
-                  setShowRecovery(false)
-                  setRecoveryCode("")
-                  setRecoveryError("")
-                  setShowCredentials(false)
-                }}
-                className="text-gray-500 hover:text-gray-700"
+                onClick={closeRecoveryModal}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
               >
                 ✕
               </button>
             </div>
 
-            {!showCredentials ? (
-              <form onSubmit={handleRecovery}>
-                <p className="text-sm text-gray-600 mb-4">
-                  Enter your recovery code to view credentials
+            {/* STEP 1: Enter Email */}
+            {recoveryStep === 1 && (
+              <form onSubmit={handleSendOTP} className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  Enter your registered email to receive OTP
                 </p>
                 <input
-                  type="text"
-                  placeholder="Recovery Code"
-                  value={recoveryCode}
-                  onChange={(e) => setRecoveryCode(e.target.value)}
-                  className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
+                  type="email"
+                  placeholder="Email Address"
+                  value={recoveryEmail}
+                  onChange={(e) => setRecoveryEmail(e.target.value)}
+                  className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 />
                 {recoveryError && (
-                  <p className="text-red-500 text-sm mb-4">{recoveryError}</p>
+                  <p className="text-red-500 text-sm">{recoveryError}</p>
                 )}
                 <button
                   type="submit"
                   className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
                 >
-                  Verify Code
+                  Send OTP
                 </button>
               </form>
-            ) : (
-              <div className="space-y-4">
-                <div className="bg-green-50 p-4 rounded border border-green-200">
-                  <p className="font-semibold text-green-800 mb-2">Admin Credentials:</p>
-                  <p className="text-sm">Username: <span className="font-mono font-bold">{ADMIN_USERNAME}</span></p>
-                  <p className="text-sm">Password: <span className="font-mono font-bold">{ADMIN_PASSWORD}</span></p>
-                </div>
-                <div className="bg-blue-50 p-4 rounded border border-blue-200">
-                  <p className="font-semibold text-blue-800 mb-2">Staff Credentials:</p>
-                  <p className="text-sm">Username: <span className="font-mono font-bold">{STAFF_USERNAME}</span></p>
-                  <p className="text-sm">Password: <span className="font-mono font-bold">{STAFF_PASSWORD}</span></p>
-                </div>
+            )}
+
+            {/* STEP 2: Verify OTP */}
+            {recoveryStep === 2 && (
+              <form onSubmit={handleVerifyOTP} className="space-y-4">
+                <p className="text-sm text-gray-600">
+                  Enter the 6-digit OTP sent to {recoveryEmail}
+                </p>
+                <input
+                  type="text"
+                  placeholder="Enter OTP"
+                  value={enteredOTP}
+                  onChange={(e) => setEnteredOTP(e.target.value)}
+                  className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 text-center text-2xl tracking-widest"
+                  maxLength="6"
+                  required
+                />
+                {recoveryError && (
+                  <p className="text-red-500 text-sm">{recoveryError}</p>
+                )}
                 <button
-                  onClick={() => {
-                    setShowRecovery(false)
-                    setRecoveryCode("")
-                    setShowCredentials(false)
-                  }}
-                  className="w-full bg-gray-500 text-white py-2 rounded hover:bg-gray-600"
+                  type="submit"
+                  className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700"
                 >
-                  Close
+                  Verify OTP
                 </button>
-              </div>
+                <button
+                  type="button"
+                  onClick={() => setRecoveryStep(1)}
+                  className="w-full text-sm text-blue-600 hover:underline"
+                >
+                  Resend OTP
+                </button>
+              </form>
+            )}
+
+            {/* STEP 3: Reset Password */}
+            {recoveryStep === 3 && (
+              <form onSubmit={handleResetPassword} className="space-y-4">
+                <p className="text-sm text-gray-600 mb-4">
+                  Create a new password for <strong>{recoveryUsername}</strong>
+                </p>
+                <input
+                  type="password"
+                  placeholder="New Password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+                <input
+                  type="password"
+                  placeholder="Confirm Password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="w-full px-4 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+                {recoveryError && (
+                  <p className="text-red-500 text-sm">{recoveryError}</p>
+                )}
+                <button
+                  type="submit"
+                  className="w-full bg-green-600 text-white py-2 rounded hover:bg-green-700"
+                >
+                  Reset Password
+                </button>
+              </form>
             )}
           </div>
         </div>
