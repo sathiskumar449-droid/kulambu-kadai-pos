@@ -2,28 +2,37 @@ import { Outlet, Link, useLocation } from 'react-router-dom'
 import { LayoutDashboard, UtensilsCrossed, ShoppingCart, Package, Settings, FileText, Menu as MenuIcon, X, Moon, Sun } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { supabase } from '../lib/supabase'
 
 export default function Layout() {
   const location = useLocation()
-  const [orderCount, setOrderCount] = useState(3)
+  const [orderCount, setOrderCount] = useState(0)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    const saved = localStorage.getItem('darkMode')
-    return saved ? JSON.parse(saved) : false
-  })
+  const [isDarkMode, setIsDarkMode] = useState(false)
 
-  // Update order count when orders change
   useEffect(() => {
-    const handleOrderCountChange = (event) => {
-      setOrderCount(event.detail)
+    const loadPending = async () => {
+      const { count, error } = await supabase
+        .from('orders')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'PENDING')
+
+      if (!error && typeof count === 'number') {
+        setOrderCount(count)
+      }
     }
-    window.addEventListener('orderCountChanged', handleOrderCountChange)
-    return () => window.removeEventListener('orderCountChanged', handleOrderCountChange)
+
+    loadPending()
+
+    const channel = supabase.channel('layout-orders-badge')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, loadPending)
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
   }, [])
 
   // Dark mode effect
   useEffect(() => {
-    localStorage.setItem('darkMode', JSON.stringify(isDarkMode))
     if (isDarkMode) {
       document.documentElement.classList.add('dark')
     } else {

@@ -2,41 +2,32 @@ import { useState, useEffect } from 'react'
 import { Calendar, Download, TrendingUp } from 'lucide-react'
 import { format, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
-
-// Mock report data
-const MOCK_REPORT_DATA = {
-  summary: { totalRevenue: 12500, totalOrders: 28, avgOrderValue: 446.43 },
-  itemWiseSales: [
-    { name: 'Sambar', quantity: 15, revenue: 1800 },
-    { name: 'Rasam', quantity: 12, revenue: 1200 },
-    { name: 'Vaghali', quantity: 10, revenue: 1400 },
-    { name: 'Curd Rice', quantity: 8, revenue: 720 },
-    { name: 'Lemon Rice', quantity: 6, revenue: 510 },
-    { name: 'Butter Rice', quantity: 5, revenue: 475 },
-    { name: 'Ghee Puri', quantity: 18, revenue: 720 },
-    { name: 'Chappati', quantity: 20, revenue: 600 }
-  ],
-  dailyBreakdown: [
-    { date: 'Jan 16', revenue: 9500, orders: 22 },
-    { date: 'Jan 17', revenue: 10200, orders: 24 },
-    { date: 'Jan 18', revenue: 11000, orders: 26 },
-    { date: 'Jan 19', revenue: 10800, orders: 25 },
-    { date: 'Jan 20', revenue: 12000, orders: 27 },
-    { date: 'Jan 21', revenue: 12300, orders: 28 },
-    { date: 'Jan 22', revenue: 12500, orders: 28 }
-  ]
-}
+import { convertToTamil } from '../lib/tamilTranslations'
+import { supabase } from '../lib/supabase'
 
 export default function Reports() {
   const [reportType, setReportType] = useState('daily')
   const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'))
-  const [reportData, setReportData] = useState(MOCK_REPORT_DATA)
+  const [reportData, setReportData] = useState({ summary: { totalRevenue: 0, totalOrders: 0, avgOrderValue: 0 }, itemWiseSales: [], dailyBreakdown: [] })
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     updateDateRange(reportType)
   }, [reportType])
+
+  useEffect(() => {
+    fetchReports()
+
+    const channel = supabase.channel('reports-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, fetchReports)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, fetchReports)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_sales_summary' }, fetchReports)
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
+  }, [startDate, endDate])
 
   const updateDateRange = (type) => {
     const today = new Date()
@@ -60,14 +51,76 @@ export default function Reports() {
 
     setStartDate(start)
     setEndDate(end)
-    setReportData(MOCK_REPORT_DATA)
+  }
+
+  const fetchReports = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const start = new Date(startDate)
+      start.setHours(0, 0, 0, 0)
+      const end = new Date(endDate)
+      end.setHours(23, 59, 59, 999)
+
+      const { data: summaryRows, error: summaryError } = await supabase
+        .from('daily_sales_summary')
+        .select('date, total_revenue, total_orders')
+        .gte('date', startDate)
+        .lte('date', endDate)
+        .order('date')
+
+      if (summaryError) throw summaryError
+
+      const totalRevenue = (summaryRows || []).reduce((s, r) => s + (r.total_revenue || 0), 0)
+      const totalOrders = (summaryRows || []).reduce((s, r) => s + (r.total_orders || 0), 0)
+      const avgOrderValue = totalOrders ? totalRevenue / totalOrders : 0
+
+      const dailyBreakdown = (summaryRows || []).map(r => ({
+        date: format(new Date(r.date), 'MMM dd'),
+        revenue: r.total_revenue || 0,
+        orders: r.total_orders || 0
+      }))
+
+      const { data: itemRows, error: itemsError } = await supabase
+        .from('order_items')
+        .select('item_name, quantity, price, subtotal, created_at')
+        .gte('created_at', start.toISOString())
+        .lte('created_at', end.toISOString())
+
+      if (itemsError) throw itemsError
+
+      const byItem = {}
+      ;(itemRows || []).forEach(row => {
+        const key = row.item_name || 'Unknown'
+        const qty = Number(row.quantity || 0)
+        const revenue = Number(row.subtotal || (row.price || 0) * qty)
+        if (!byItem[key]) byItem[key] = { name: key, quantity: 0, revenue: 0 }
+        byItem[key].quantity += qty
+        byItem[key].revenue += revenue
+      })
+
+      const itemWiseSales = Object.values(byItem)
+        .sort((a, b) => b.revenue - a.revenue)
+
+      setReportData({
+        summary: { totalRevenue, totalOrders, avgOrderValue },
+        itemWiseSales,
+        dailyBreakdown
+      })
+    } catch (err) {
+      console.error('Failed to load reports:', err)
+      setError('Unable to load reports data.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const exportToCSV = () => {
     const csvContent = [
       ['Item Name', 'Quantity Sold', 'Revenue'],
       ...reportData.itemWiseSales.map(item => [
-        item.name,
+        convertToTamil(item.name),
         item.quantity.toFixed(2),
         item.revenue.toFixed(2)
       ])
@@ -85,6 +138,10 @@ export default function Reports() {
 
   return (
     <div className="space-y-6">
+      {error && (
+        <div className="card bg-red-50 text-red-700 p-3">{error}</div>
+      )}
+
       {/* Report Controls */}
       <div className="card">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -175,11 +232,18 @@ export default function Reports() {
                 <div className="card">
                   <h3 className="text-lg font-semibold mb-4">Revenue by Item</h3>
                   <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={reportData.itemWiseSales.slice(0, 10)}>
+                    <BarChart data={reportData.itemWiseSales.slice(0, 10).map(item => ({
+                      ...item,
+                      tamilName: convertToTamil(item.name)
+                    }))}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" angle={-45} textAnchor="end" height={100} />
+                      <XAxis dataKey="tamilName" angle={-45} textAnchor="end" height={100} />
                       <YAxis />
-                      <Tooltip />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#f9fafb', border: '1px solid #e5e7eb' }}
+                        formatter={(value) => `₹${value.toFixed(2)}`}
+                        labelFormatter={(label) => `Item: ${label}`}
+                      />
                       <Legend />
                       <Bar dataKey="revenue" fill="#f58700" name="Revenue (₹)" />
                     </BarChart>
@@ -192,19 +256,25 @@ export default function Reports() {
                   <ResponsiveContainer width="100%" height={300}>
                     <PieChart>
                       <Pie
-                        data={reportData.itemWiseSales.slice(0, 8)}
+                        data={reportData.itemWiseSales.slice(0, 8).map(item => ({
+                          ...item,
+                          tamilName: convertToTamil(item.name)
+                        }))}
                         dataKey="revenue"
-                        nameKey="name"
+                        nameKey="tamilName"
                         cx="50%"
                         cy="50%"
                         outerRadius={100}
-                        label={(entry) => `${entry.name}: ₹${entry.revenue.toFixed(0)}`}
+                        label={(entry) => `${entry.tamilName}: ₹${entry.revenue.toFixed(0)}`}
                       >
                         {reportData.itemWiseSales.slice(0, 8).map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                         ))}
                       </Pie>
-                      <Tooltip />
+                      <Tooltip 
+                        contentStyle={{ backgroundColor: '#f9fafb', border: '1px solid #e5e7eb' }}
+                        formatter={(value) => `₹${value.toFixed(2)}`}
+                      />
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
@@ -259,7 +329,7 @@ export default function Reports() {
                           {index + 1}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="font-medium text-gray-900">{item.name}</div>
+                          <div className="font-medium text-gray-900">{convertToTamil(item.name)}</div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">{item.quantity.toFixed(2)}</div>

@@ -8,43 +8,54 @@ import {
   DollarSign,
   FileText
 } from 'lucide-react'
+import { supabase } from '../lib/supabase'
 import { convertToTamil } from '../lib/tamilTranslations'
-
-const MOCK_MENU_ITEMS = [
-  { id: 1, name: 'சாம்பார்', category: 'Curries', price: 120 },
-  { id: 2, name: 'ரசம்', category: 'Curries', price: 100 },
-  { id: 3, name: 'தயிர் சாதம்', category: 'Rice', price: 90 }
-]
 
 export default function Orders() {
   const [menuItems, setMenuItems] = useState([])
   const [cart, setCart] = useState([])
-  const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [loadError, setLoadError] = useState(null)
+  const [actionError, setActionError] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedPayment, setSelectedPayment] = useState(null)
   const [rowQuantities, setRowQuantities] = useState({})
-  const [addedFlash, setAddedFlash] = useState({}) // 👈 green flash state
+  const [addedFlash, setAddedFlash] = useState({})
 
+  /* ================= MENU LOAD (SUPABASE) ================= */
   useEffect(() => {
-    const savedMenu = JSON.parse(localStorage.getItem('menuItems') || 'null')
-    const menu = savedMenu?.length ? savedMenu : MOCK_MENU_ITEMS
-    setMenuItems(menu)
-
-    setRowQuantities(
-      menu.reduce((a, i) => ({ ...a, [i.id]: 1 }), {})
-    )
-
-    const savedOrders = JSON.parse(localStorage.getItem('orders') || '[]')
-    setOrders(savedOrders)
-
-    setLoading(false)
+    fetchMenu()
   }, [])
 
-  /* ---------------- ADD TO CART ---------------- */
+  async function fetchMenu() {
+    try {
+      setLoading(true)
+      setLoadError(null)
+
+      const { data, error: fetchError } = await supabase
+        .from('menu_items')
+        .select('id, name, price, is_enabled')
+        .eq('is_enabled', true)
+        .order('created_at')
+
+      if (fetchError) throw fetchError
+
+      setMenuItems(data || [])
+      setRowQuantities((data || []).reduce((a, i) => ({ ...a, [i.id]: 1 }), {}))
+    } catch (err) {
+      console.error('Failed to load menu:', err)
+      setLoadError('Unable to load menu items. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  /* ================= ADD TO CART ================= */
   const addToCart = (item) => {
     const qty = rowQuantities[item.id] || 1
     const tamilName = convertToTamil(item.name)
+
     const exists = cart.find(i => i.id === item.id)
 
     if (exists) {
@@ -54,20 +65,28 @@ export default function Orders() {
           : i
       ))
     } else {
-      setCart([...cart, { ...item, name: tamilName, quantity: qty }])
+      setCart([
+        ...cart,
+        {
+          id: item.id,
+          name: tamilName,
+          price: item.price,
+          quantity: qty
+        }
+      ])
     }
 
-    // 👇 green flash on Add
-    setAddedFlash(prev => ({ ...prev, [item.id]: true }))
+    // green flash
+    setAddedFlash(p => ({ ...p, [item.id]: true }))
     setTimeout(() => {
-      setAddedFlash(prev => ({ ...prev, [item.id]: false }))
-    }, 800)
+      setAddedFlash(p => ({ ...p, [item.id]: false }))
+    }, 700)
 
-    // reset row qty to 1
+    // reset qty
     setRowQuantities(q => ({ ...q, [item.id]: 1 }))
   }
 
-  /* ---------------- CART ---------------- */
+  /* ================= CART ================= */
   const updateCartQty = (id, d) => {
     setCart(cart.map(i =>
       i.id === id
@@ -79,58 +98,74 @@ export default function Orders() {
   const removeFromCart = id =>
     setCart(cart.filter(i => i.id !== id))
 
-  const total = cart.reduce((s, i) => s + i.price * i.quantity, 0)
+  const total = cart.reduce(
+    (s, i) => s + i.price * i.quantity,
+    0
+  )
 
-  /* ---------------- SAVE BILL ---------------- */
-  const saveBill = () => {
+  /* ================= SAVE BILL (SUPABASE) ================= */
+  async function saveBill() {
     if (!cart.length || !selectedPayment) return
 
-    const newOrder = {
-      id: Date.now(),
-      orderNumber: `ORD-${Date.now()}`,
-      date: new Date().toISOString(),
-      time: new Date().toLocaleTimeString('en-IN', {
-        hour: '2-digit',
-        minute: '2-digit'
-      }),
-      status: 'PENDING',
-      paymentMethod: selectedPayment,
-      total,
-      totalAmount: total,
-      items: cart.map(i => ({
-        name: convertToTamil(i.name),
+    try {
+      setSaving(true)
+      setActionError(null)
+
+      const orderNumber = `ORD-${Date.now()}`
+
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert([{
+          order_number: orderNumber,
+          status: 'Pending',
+          total_amount: total
+        }])
+        .select()
+        .single()
+
+      if (orderError) throw orderError
+
+      const itemsPayload = cart.map(i => ({
+        order_id: order.id,
+        menu_item_id: i.id,
+        item_name: i.name, // Tamil already stored
         quantity: i.quantity,
         price: i.price,
         subtotal: i.price * i.quantity
       }))
+
+      const { error: itemsError } = await supabase.from('order_items').insert(itemsPayload)
+      if (itemsError) throw itemsError
+
+      setCart([])
+      setSelectedPayment(null)
+    } catch (err) {
+      console.error('Failed to save order:', err)
+      setActionError(err?.message || 'Could not save bill. Please retry.')
+    } finally {
+      setSaving(false)
     }
-
-    const updated = [...orders, newOrder]
-    setOrders(updated)
-    localStorage.setItem('orders', JSON.stringify(updated))
-
-    window.dispatchEvent(new CustomEvent('orderAdded', { detail: newOrder }))
-    window.dispatchEvent(
-      new CustomEvent('orderCountChanged', {
-        detail: updated.filter(o => o.status === 'PENDING').length
-      })
-    )
-
-    setCart([])
-    setSelectedPayment(null)
   }
 
   const filteredItems = menuItems.filter(i =>
-    i.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    i.category.toLowerCase().includes(searchQuery.toLowerCase())
+    i.name.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   if (loading) return <div>Loading…</div>
 
+  if (loadError) {
+    return (
+      <div className="card text-center py-10 space-y-3">
+        <p className="text-red-600 font-semibold">{loadError}</p>
+        <button className="btn-primary" onClick={fetchMenu}>Retry</button>
+      </div>
+    )
+  }
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-      {/* ---------------- MENU ---------------- */}
+      {/* ================= MENU ================= */}
       <div className="lg:col-span-2 card">
         <input
           className="input-field mb-4"
@@ -161,7 +196,7 @@ export default function Orders() {
                     {convertToTamil(item.name)}
                   </td>
 
-                  {/* ✅ PERFECT QTY ALIGNMENT */}
+                  {/* QTY */}
                   <td className="text-center">
                     <div className="flex items-center justify-center gap-2">
                       <button
@@ -171,8 +206,7 @@ export default function Orders() {
                             [item.id]: Math.max(1, q[item.id] - 1)
                           }))
                         }
-                        className="w-8 h-8 flex items-center justify-center
-                                   rounded bg-gray-200 hover:bg-gray-300 font-bold"
+                        className="w-8 h-8 rounded bg-gray-200 font-bold"
                       >
                         −
                       </button>
@@ -188,8 +222,7 @@ export default function Orders() {
                             [item.id]: q[item.id] + 1
                           }))
                         }
-                        className="w-8 h-8 flex items-center justify-center
-                                   rounded bg-gray-200 hover:bg-gray-300 font-bold"
+                        className="w-8 h-8 rounded bg-gray-200 font-bold"
                       >
                         +
                       </button>
@@ -198,11 +231,11 @@ export default function Orders() {
 
                   <td>₹{item.price * qty}</td>
 
-                  {/* ✅ ADD BUTTON GREEN FLASH */}
+                  {/* ADD */}
                   <td>
                     <button
                       onClick={() => addToCart(item)}
-                      className={`px-4 py-2 rounded font-semibold text-white transition-colors
+                      className={`px-4 py-2 rounded font-semibold text-white
                         ${
                           addedFlash[item.id]
                             ? 'bg-green-500'
@@ -219,11 +252,15 @@ export default function Orders() {
         </table>
       </div>
 
-      {/* ---------------- CART ---------------- */}
+      {/* ================= CART ================= */}
       <div className="card">
         <h3 className="font-bold flex items-center mb-2">
           <ShoppingCart className="mr-2" /> Cart
         </h3>
+
+        {actionError && (
+          <div className="mb-2 text-sm text-red-600">{actionError}</div>
+        )}
 
         {cart.length === 0 && (
           <p className="text-gray-400 text-sm">Cart is empty</p>
@@ -231,9 +268,7 @@ export default function Orders() {
 
         {cart.map(i => (
           <div key={i.id} className="flex justify-between items-center py-1">
-            <span>
-              {convertToTamil(i.name)} × {i.quantity}
-            </span>
+            <span>{i.name} × {i.quantity}</span>
             <div className="flex items-center gap-2">
               <button onClick={() => updateCartQty(i.id, -1)}>
                 <Minus size={14} />

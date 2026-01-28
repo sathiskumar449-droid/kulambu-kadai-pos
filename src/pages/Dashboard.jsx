@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { TrendingUp, ShoppingBag, AlertTriangle, DollarSign } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts'
+import { supabase } from '../lib/supabase'
+import { convertToTamil } from '../lib/tamilTranslations'
 
 export default function Dashboard() {
   const [stats, setStats] = useState({
@@ -11,112 +13,106 @@ export default function Dashboard() {
   })
   const [dailySalesData, setDailySalesData] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    // Load data from localStorage
-    const loadDashboardData = () => {
-      try {
-        // Get menu items
-        const menuItemsJson = localStorage.getItem('menuItems')
-        const menuItems = menuItemsJson ? JSON.parse(menuItemsJson) : []
-        
-        // Get orders
-        const ordersJson = localStorage.getItem('orders')
-        const orders = ordersJson ? JSON.parse(ordersJson) : []
-        
-        // Calculate today's date
-        const today = new Date().toISOString().split('T')[0]
-        
-        // Filter today's orders
-        const todayOrders = orders.filter(order => {
-          const orderDate = order.date ? order.date.split('T')[0] : today
-          return orderDate === today
-        })
-        
-        // Calculate today's sales and order count
-        const todaySales = todayOrders.reduce((sum, order) => sum + (order.total || 0), 0)
-        const todayOrderCount = todayOrders.length
-        
-        // Calculate best selling items (from today's orders)
-        const itemSalesMap = {}
-        todayOrders.forEach(order => {
-          if (order.items) {
-            order.items.forEach(item => {
-              itemSalesMap[item.name] = (itemSalesMap[item.name] || 0) + item.quantity
-            })
-          }
-        })
-        
-        const bestSellingItems = Object.entries(itemSalesMap)
-          .map(([name, quantity]) => ({ name, quantity }))
-          .sort((a, b) => b.quantity - a.quantity)
-          .slice(0, 5)
-        
-        // Get low stock items from menu
-        const lowStockItems = menuItems
-          .filter(item => item.stock_qty && item.stock_qty < 10)
-          .map(item => ({
-            name: item.name,
-            remaining: item.stock_qty,
-            total: 20 // Assuming default max stock
-          }))
-        
-        // Generate daily sales data for last 7 days
-        const dailyData = []
-        for (let i = 6; i >= 0; i--) {
-          const date = new Date()
-          date.setDate(date.getDate() - i)
-          const dateStr = date.toISOString().split('T')[0]
-          const dateDisplay = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-          
-          const dayOrders = orders.filter(order => {
-            const orderDate = order.date ? order.date.split('T')[0] : null
-            return orderDate === dateStr
-          })
-          
-          const dayRevenue = dayOrders.reduce((sum, order) => sum + (order.total || 0), 0)
-          
-          dailyData.push({
-            date: dateDisplay,
-            revenue: dayRevenue,
-            orders: dayOrders.length
-          })
-        }
-        
-        setStats({
-          todaySales: todaySales,
-          todayOrders: todayOrderCount,
-          bestSelling: bestSellingItems.length > 0 ? bestSellingItems : [{ name: 'No sales today', quantity: 0 }],
-          lowStock: lowStockItems
-        })
-        
-        setDailySalesData(dailyData)
-        setLoading(false)
-      } catch (error) {
-        console.error('Error loading dashboard data:', error)
-        setLoading(false)
-      }
-    }
-    
-    loadDashboardData()
-    
-    // Set up listener for data changes
-    const handleStorageChange = () => {
-      loadDashboardData()
-    }
-    
-    window.addEventListener('storage', handleStorageChange)
-    
-    // Also listen for custom events
-    window.addEventListener('orderAdded', handleStorageChange)
-    window.addEventListener('orderCountChanged', handleStorageChange)
-    
-    return () => {
-      window.removeEventListener('storage', handleStorageChange)
-      window.removeEventListener('orderAdded', handleStorageChange)
-      window.removeEventListener('orderCountChanged', handleStorageChange)
-    }
+    fetchDashboard()
+
+    const channel = supabase.channel('dashboard-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, fetchDashboard)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, fetchDashboard)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_sales_summary' }, fetchDashboard)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, fetchDashboard)
+      .subscribe()
+
+    return () => supabase.removeChannel(channel)
   }, [])
+
+  const fetchDashboard = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const todayStr = new Date().toISOString().slice(0, 10)
+      const weekAgo = new Date()
+      weekAgo.setDate(weekAgo.getDate() - 6)
+
+      const { data: todaySummary, error: summaryError } = await supabase
+        .from('daily_sales_summary')
+        .select('date, total_revenue, total_orders')
+        .eq('date', todayStr)
+        .maybeSingle()
+
+      if (summaryError) throw summaryError
+
+      const { data: weekSummary, error: weekError } = await supabase
+        .from('daily_sales_summary')
+        .select('date, total_revenue, total_orders')
+        .gte('date', weekAgo.toISOString().slice(0, 10))
+        .lte('date', todayStr)
+        .order('date')
+
+      if (weekError) throw weekError
+
+      const { data: itemsToday, error: itemsError } = await supabase
+        .from('order_items')
+        .select('item_name, quantity, price, subtotal, created_at')
+        .gte('created_at', new Date(todayStr).toISOString())
+        .lte('created_at', new Date(`${todayStr}T23:59:59.999Z`).toISOString())
+
+      if (itemsError) throw itemsError
+
+      const { data: stockRows, error: stockError } = await supabase
+        .from('stock_logs')
+        .select('menu_item_id, remaining_quantity, prepared_quantity, menu_items(name, unit, daily_stock_quantity)')
+        .eq('date', todayStr)
+
+      if (stockError) throw stockError
+
+      const bestSellingMap = {}
+      ;(itemsToday || []).forEach(row => {
+        const qty = Number(row.quantity || 0)
+        const key = row.item_name || 'Unknown'
+        bestSellingMap[key] = (bestSellingMap[key] || 0) + qty
+      })
+
+      const bestSelling = Object.entries(bestSellingMap)
+        .map(([name, quantity]) => ({ name: convertToTamil(name), quantity }))
+        .sort((a, b) => b.quantity - a.quantity)
+        .slice(0, 5)
+
+      const lowStock = (stockRows || [])
+        .map(row => ({
+          name: convertToTamil(row.menu_items?.name || 'Unknown'),
+          remaining: row.remaining_quantity ?? 0,
+          total: row.prepared_quantity ?? row.menu_items?.daily_stock_quantity ?? 0
+        }))
+        .filter(item => item.remaining < 10)
+
+      const todaySales = todaySummary?.total_revenue || 0
+      const todayOrders = todaySummary?.total_orders || 0
+
+      const dailyData = (weekSummary || []).map(row => ({
+        date: new Date(row.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+        revenue: row.total_revenue || 0,
+        orders: row.total_orders || 0
+      }))
+
+      setStats({
+        todaySales,
+        todayOrders,
+        bestSelling: bestSelling.length ? bestSelling : [{ name: 'No sales today', quantity: 0 }],
+        lowStock
+      })
+
+      setDailySalesData(dailyData)
+    } catch (err) {
+      console.error('Dashboard load failed:', err)
+      setError('Unable to load dashboard data.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -128,6 +124,10 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
+      {error && (
+        <div className="card bg-red-50 text-red-700 p-3">{error}</div>
+      )}
+
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <div className="card bg-gradient-to-br from-primary-500 to-primary-600 text-white">

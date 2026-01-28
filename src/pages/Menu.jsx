@@ -1,17 +1,12 @@
 import { useState, useEffect } from 'react'
 import { Plus, Edit2, Trash2, Save, X } from 'lucide-react'
 import { convertToTamil } from '../lib/tamilTranslations'
-
-// Mock menu items (Tamil only)
-const MOCK_MENU_ITEMS = [
-  { id: 1, name: 'சாம்பார்', price: 120, unit: 'Qty', stock_qty: 50, is_enabled: true },
-  { id: 2, name: 'ரசம்', price: 100, unit: 'Qty', stock_qty: 40, is_enabled: true },
-  { id: 3, name: 'தயிர் சாதம்', price: 90, unit: 'Qty', stock_qty: 60, is_enabled: true }
-]
+import { supabase } from '../lib/supabase'
 
 export default function Menu() {
   const [menuItems, setMenuItems] = useState([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   // modal + edit
   const [showModal, setShowModal] = useState(false)
@@ -27,19 +22,27 @@ export default function Menu() {
 
   // load menu
   useEffect(() => {
-    const saved = localStorage.getItem('menuItems')
-    if (saved) {
-      setMenuItems(JSON.parse(saved))
-    } else {
-      setMenuItems(MOCK_MENU_ITEMS)
-      localStorage.setItem('menuItems', JSON.stringify(MOCK_MENU_ITEMS))
-    }
-    setLoading(false)
+    fetchMenu()
   }, [])
 
-  const persistItems = (items) => {
-    setMenuItems(items)
-    localStorage.setItem('menuItems', JSON.stringify(items))
+  const fetchMenu = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      const { data, error: fetchError } = await supabase
+        .from('menu_items')
+        .select('id, name, price, daily_stock_quantity, unit, is_enabled')
+        .order('created_at')
+
+      if (fetchError) throw fetchError
+      setMenuItems(data || [])
+    } catch (err) {
+      console.error('Failed to load menu:', err)
+      setError('Unable to load menu items. Please retry.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const resetForm = () => {
@@ -63,60 +66,84 @@ export default function Menu() {
   }
 
   // ADD
-  const handleAdd = (e) => {
+  const handleAdd = async (e) => {
     e.preventDefault()
 
-    const tamilName = convertToTamil(formData.name)
+    try {
+      setError(null)
+      const tamilName = convertToTamil(formData.name)
 
-    const newItem = {
-      id: Math.max(0, ...menuItems.map(m => m.id)) + 1,
-      name: tamilName,
-      price: Number(formData.price),
-      stock_qty: Number(formData.stock_qty),
-      unit: 'Qty',
-      is_enabled: formData.is_enabled
+      const { error: insertError } = await supabase.from('menu_items').insert([{
+        name: tamilName,
+        price: Number(formData.price),
+        daily_stock_quantity: Number(formData.stock_qty),
+        unit: formData.unit || 'Qty',
+        is_enabled: formData.is_enabled
+      }])
+
+      if (insertError) throw insertError
+      await fetchMenu()
+      resetForm()
+    } catch (err) {
+      console.error('Add failed:', err)
+      setError('Could not add item.')
     }
-
-    persistItems([...menuItems, newItem])
-    resetForm()
   }
 
   // EDIT
   const handleEdit = (item) => {
     setFormData({
       name: item.name,
-      price: item.price.toString(),
-      stock_qty: item.stock_qty.toString(),
-      unit: 'Qty',
+      price: item.price?.toString() || '',
+      stock_qty: (item.daily_stock_quantity ?? '').toString(),
+      unit: item.unit || 'Qty',
       is_enabled: item.is_enabled
     })
     setEditingId(item.id)
     setShowModal(true)
   }
 
-  const handleUpdate = (e) => {
+  const handleUpdate = async (e) => {
     e.preventDefault()
 
-    const tamilName = convertToTamil(formData.name)
+    try {
+      setError(null)
+      const tamilName = convertToTamil(formData.name)
 
-    const updated = menuItems.map(item =>
-      item.id === editingId
-        ? {
-            ...item,
-            name: tamilName,
-            price: Number(formData.price),
-            stock_qty: Number(formData.stock_qty),
-            is_enabled: formData.is_enabled
-          }
-        : item
-    )
+      const { error: updateError } = await supabase
+        .from('menu_items')
+        .update({
+          name: tamilName,
+          price: Number(formData.price),
+          daily_stock_quantity: Number(formData.stock_qty),
+          unit: formData.unit || 'Qty',
+          is_enabled: formData.is_enabled
+        })
+        .eq('id', editingId)
 
-    persistItems(updated)
-    resetForm()
+      if (updateError) throw updateError
+      await fetchMenu()
+      resetForm()
+    } catch (err) {
+      console.error('Update failed:', err)
+      setError('Could not update item.')
+    }
   }
 
-  const handleDelete = (id) => {
-    persistItems(menuItems.filter(item => item.id !== id))
+  const handleDelete = async (id) => {
+    try {
+      setError(null)
+      const { error: deleteError } = await supabase
+        .from('menu_items')
+        .delete()
+        .eq('id', id)
+
+      if (deleteError) throw deleteError
+      setMenuItems(menuItems.filter(item => item.id !== id))
+    } catch (err) {
+      console.error('Delete failed:', err)
+      setError('Could not delete item.')
+    }
   }
 
   if (loading) {
@@ -136,6 +163,10 @@ export default function Menu() {
           Add New Item
         </button>
       </div>
+
+      {error && (
+        <div className="card bg-red-50 text-red-700 p-3">{error}</div>
+      )}
 
       {/* MENU LIST */}
       <div className="grid gap-4">
@@ -200,7 +231,7 @@ export default function Menu() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-3 gap-4">
                 <div>
                   <label className="block text-sm mb-1">Price</label>
                   <input
@@ -222,6 +253,18 @@ export default function Menu() {
                     onChange={handleInputChange}
                     required
                     className="input-field"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm mb-1">Unit</label>
+                  <input
+                    type="text"
+                    name="unit"
+                    value={formData.unit}
+                    onChange={handleInputChange}
+                    className="input-field"
+                    placeholder="Qty / kg / litres"
                   />
                 </div>
               </div>
