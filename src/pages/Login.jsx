@@ -76,13 +76,6 @@ export default function Login() {
             {loading ? "Logging in..." : "Login"}
           </button>
         </form>
-
-        {/* 📝 CREDENTIALS HINT */}
-        <div className="bg-yellow-50 p-3 rounded text-xs text-gray-700">
-          <p className="font-semibold mb-1">Credentials:</p>
-          <p>Admin: {ADMIN_USERNAME} / {ADMIN_PASSWORD}</p>
-          <p>Staff: {STAFF_USERNAME} / {STAFF_PASSWORD}</p>
-        </div>
       </div>
     </div>
   )
