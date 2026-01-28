@@ -1,302 +1,314 @@
 import { useState, useEffect } from 'react'
-import { Plus, Edit2, Trash2, Save, X } from 'lucide-react'
-import { convertToTamil } from '../lib/tamilTranslations'
+import {
+  Plus,
+  Minus,
+  Trash2,
+  ShoppingCart,
+  CreditCard,
+  DollarSign,
+  FileText
+} from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { convertToTamil } from '../lib/tamilTranslations'
 
 export default function Menu() {
   const [menuItems, setMenuItems] = useState([])
+  const [cart, setCart] = useState([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [loadError, setLoadError] = useState(null)
+  const [actionError, setActionError] = useState(null)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedPayment, setSelectedPayment] = useState(null)
+  const [rowQuantities, setRowQuantities] = useState({})
+  const [addedFlash, setAddedFlash] = useState({})
 
-  // modal + edit
-  const [showModal, setShowModal] = useState(false)
-  const [editingId, setEditingId] = useState(null)
-
-  const [formData, setFormData] = useState({
-    name: '',
-    price: '',
-    stock_qty: '',
-    unit: 'Qty',
-    is_enabled: true
-  })
-
-  // load menu
+  /* ================= MENU LOAD (SUPABASE) ================= */
   useEffect(() => {
     fetchMenu()
   }, [])
 
-  const fetchMenu = async () => {
+  async function fetchMenu() {
     try {
       setLoading(true)
-      setError(null)
+      setLoadError(null)
 
       const { data, error: fetchError } = await supabase
         .from('menu_items')
-        .select('id, name, price, daily_stock_quantity, unit, is_enabled')
+        .select('id, name, price, is_enabled')
+        .eq('is_enabled', true)
         .order('created_at')
 
       if (fetchError) throw fetchError
+
       setMenuItems(data || [])
+      setRowQuantities((data || []).reduce((a, i) => ({ ...a, [i.id]: 1 }), {}))
     } catch (err) {
       console.error('Failed to load menu:', err)
-      setError('Unable to load menu items. Please retry.')
+      setLoadError('Unable to load menu items. Please try again.')
     } finally {
       setLoading(false)
     }
   }
 
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      price: '',
-      stock_qty: '',
-      unit: 'Qty',
-      is_enabled: true
-    })
-    setEditingId(null)
-    setShowModal(false)
-  }
+  /* ================= ADD TO CART ================= */
+  const addToCart = (item) => {
+    const qty = rowQuantities[item.id] || 1
+    const tamilName = convertToTamil(item.name)
 
-  const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target
-    setFormData({
-      ...formData,
-      [name]: type === 'checkbox' ? checked : value
-    })
-  }
+    const exists = cart.find(i => i.id === item.id)
 
-  // ADD
-  const handleAdd = async (e) => {
-    e.preventDefault()
-
-    try {
-      setError(null)
-      const tamilName = convertToTamil(formData.name)
-
-      const { error: insertError } = await supabase.from('menu_items').insert([{
-        name: tamilName,
-        price: Number(formData.price),
-        daily_stock_quantity: Number(formData.stock_qty),
-        unit: formData.unit || 'Qty',
-        is_enabled: formData.is_enabled
-      }])
-
-      if (insertError) throw insertError
-      await fetchMenu()
-      resetForm()
-    } catch (err) {
-      console.error('Add failed:', err)
-      setError('Could not add item.')
-    }
-  }
-
-  // EDIT
-  const handleEdit = (item) => {
-    setFormData({
-      name: item.name,
-      price: item.price?.toString() || '',
-      stock_qty: (item.daily_stock_quantity ?? '').toString(),
-      unit: item.unit || 'Qty',
-      is_enabled: item.is_enabled
-    })
-    setEditingId(item.id)
-    setShowModal(true)
-  }
-
-  const handleUpdate = async (e) => {
-    e.preventDefault()
-
-    try {
-      setError(null)
-      const tamilName = convertToTamil(formData.name)
-
-      const { error: updateError } = await supabase
-        .from('menu_items')
-        .update({
+    if (exists) {
+      setCart(cart.map(i =>
+        i.id === item.id
+          ? { ...i, quantity: i.quantity + qty }
+          : i
+      ))
+    } else {
+      setCart([
+        ...cart,
+        {
+          id: item.id,
           name: tamilName,
-          price: Number(formData.price),
-          daily_stock_quantity: Number(formData.stock_qty),
-          unit: formData.unit || 'Qty',
-          is_enabled: formData.is_enabled
-        })
-        .eq('id', editingId)
-
-      if (updateError) throw updateError
-      await fetchMenu()
-      resetForm()
-    } catch (err) {
-      console.error('Update failed:', err)
-      setError('Could not update item.')
+          price: item.price,
+          quantity: qty
+        }
+      ])
     }
+
+    // green flash
+    setAddedFlash(p => ({ ...p, [item.id]: true }))
+    setTimeout(() => {
+      setAddedFlash(p => ({ ...p, [item.id]: false }))
+    }, 700)
+
+    // reset qty
+    setRowQuantities(q => ({ ...q, [item.id]: 1 }))
   }
 
-  const handleDelete = async (id) => {
+  /* ================= CART ================= */
+  const updateCartQty = (id, d) => {
+    setCart(cart.map(i =>
+      i.id === id
+        ? { ...i, quantity: Math.max(1, i.quantity + d) }
+        : i
+    ))
+  }
+
+  const removeFromCart = id =>
+    setCart(cart.filter(i => i.id !== id))
+
+  const total = cart.reduce(
+    (s, i) => s + i.price * i.quantity,
+    0
+  )
+
+  /* ================= SAVE BILL (SUPABASE) ================= */
+  async function saveBill() {
+    if (!cart.length || !selectedPayment) return
+
     try {
-      setError(null)
-      const { error: deleteError } = await supabase
-        .from('menu_items')
-        .delete()
-        .eq('id', id)
+      setSaving(true)
+      setActionError(null)
 
-      if (deleteError) throw deleteError
-      setMenuItems(menuItems.filter(item => item.id !== id))
+      const orderNumber = `ORD-${Date.now()}`
+
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert([{
+          order_number: orderNumber,
+          status: 'Pending',
+          total_amount: total
+        }])
+        .select()
+        .single()
+
+      if (orderError) throw orderError
+
+      const itemsPayload = cart.map(i => ({
+        order_id: order.id,
+        menu_item_id: i.id,
+        item_name: i.name, // Tamil already stored
+        quantity: i.quantity,
+        price: i.price,
+        subtotal: i.price * i.quantity
+      }))
+
+      const { error: itemsError } = await supabase.from('order_items').insert(itemsPayload)
+      if (itemsError) throw itemsError
+
+      setCart([])
+      setSelectedPayment(null)
     } catch (err) {
-      console.error('Delete failed:', err)
-      setError('Could not delete item.')
+      console.error('Failed to save order:', err)
+      setActionError(err?.message || 'Could not save bill. Please retry.')
+    } finally {
+      setSaving(false)
     }
   }
 
-  if (loading) {
-    return <div className="text-gray-500">Loading menu…</div>
+  const filteredItems = menuItems.filter(i =>
+    i.name.toLowerCase().includes(searchQuery.toLowerCase())
+  )
+
+  if (loading) return <div>Loading…</div>
+
+  if (loadError) {
+    return (
+      <div className="card text-center py-10 space-y-3">
+        <p className="text-red-600 font-semibold">{loadError}</p>
+        <button className="btn-primary" onClick={fetchMenu}>Retry</button>
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-6">
-      {/* HEADER */}
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Menu Management</h2>
-        <button
-          onClick={() => setShowModal(true)}
-          className="btn-primary flex items-center"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Add New Item
-        </button>
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      {/* ================= MENU ================= */}
+      <div className="lg:col-span-2 card">
+        <input
+          className="input-field mb-4"
+          placeholder="Search menu…"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+        />
+
+        <table className="w-full">
+          <thead>
+            <tr>
+              <th>S.No</th>
+              <th>Item</th>
+              <th className="text-center">Qty</th>
+              <th>Price</th>
+              <th />
+            </tr>
+          </thead>
+
+          <tbody>
+            {filteredItems.map((item, i) => {
+              const qty = rowQuantities[item.id] || 1
+              return (
+                <tr key={item.id}>
+                  <td>{i + 1}</td>
+
+                  <td className="font-medium">
+                    {convertToTamil(item.name)}
+                  </td>
+
+                  {/* QTY */}
+                  <td className="text-center">
+                    <div className="flex items-center justify-center gap-2">
+                      <button
+                        onClick={() =>
+                          setRowQuantities(q => ({
+                            ...q,
+                            [item.id]: Math.max(1, q[item.id] - 1)
+                          }))
+                        }
+                        className="w-8 h-8 rounded bg-gray-200 font-bold"
+                      >
+                        −
+                      </button>
+
+                      <span className="w-6 text-center font-semibold">
+                        {qty}
+                      </span>
+
+                      <button
+                        onClick={() =>
+                          setRowQuantities(q => ({
+                            ...q,
+                            [item.id]: q[item.id] + 1
+                          }))
+                        }
+                        className="w-8 h-8 rounded bg-gray-200 font-bold"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </td>
+
+                  <td>₹{item.price * qty}</td>
+
+                  {/* ADD */}
+                  <td>
+                    <button
+                      onClick={() => addToCart(item)}
+                      className={`px-4 py-2 rounded font-semibold text-white
+                        ${
+                          addedFlash[item.id]
+                            ? 'bg-green-500'
+                            : 'bg-orange-500 hover:bg-orange-600'
+                        }`}
+                    >
+                      Add
+                    </button>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
       </div>
 
-      {error && (
-        <div className="card bg-red-50 text-red-700 p-3">{error}</div>
-      )}
+      {/* ================= CART ================= */}
+      <div className="card">
+        <h3 className="font-bold flex items-center mb-2">
+          <ShoppingCart className="mr-2" /> Cart
+        </h3>
 
-      {/* MENU LIST */}
-      <div className="grid gap-4">
-        {menuItems.map(item => (
-          <div key={item.id} className="card flex justify-between items-center">
-            <div>
-              <h4 className="text-lg font-semibold">{item.name}</h4>
-              <p className="text-sm text-gray-600">
-                ₹{item.price} • Stock: {item.stock_qty}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleEdit(item)}
-                className="p-2 bg-blue-100 text-blue-600 rounded"
-              >
-                <Edit2 className="w-5 h-5" />
+        {actionError && (
+          <div className="mb-2 text-sm text-red-600">{actionError}</div>
+        )}
+
+        {cart.length === 0 && (
+          <p className="text-gray-400 text-sm">Cart is empty</p>
+        )}
+
+        {cart.map(i => (
+          <div key={i.id} className="flex justify-between items-center py-1">
+            <span>{i.name} × {i.quantity}</span>
+            <div className="flex items-center gap-2">
+              <button onClick={() => updateCartQty(i.id, -1)}>
+                <Minus size={14} />
               </button>
-              <button
-                onClick={() => handleDelete(item.id)}
-                className="p-2 bg-red-100 text-red-600 rounded"
-              >
-                <Trash2 className="w-5 h-5" />
+              <button onClick={() => updateCartQty(i.id, 1)}>
+                <Plus size={14} />
+              </button>
+              <button onClick={() => removeFromCart(i.id)}>
+                <Trash2 size={14} />
               </button>
             </div>
           </div>
         ))}
-      </div>
 
-      {/* MODAL */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white w-full max-w-lg rounded-xl p-6 relative">
+        <p className="font-bold mt-3">Total: ₹{total}</p>
 
+        {!selectedPayment ? (
+          <>
             <button
-              onClick={resetForm}
-              className="absolute top-3 right-3 text-gray-500"
+              className="btn-primary w-full mt-2"
+              onClick={() => setSelectedPayment('cash')}
             >
-              <X />
+              <DollarSign /> Cash
             </button>
-
-            <h3 className="text-lg font-semibold mb-4">
-              {editingId ? 'Edit Menu Item' : 'Add Menu Item'}
-            </h3>
-
-            <form
-              onSubmit={editingId ? handleUpdate : handleAdd}
-              className="space-y-4"
+            <button
+              className="btn-secondary w-full mt-2"
+              onClick={() => setSelectedPayment('online')}
             >
-              <div>
-                <label className="block text-sm mb-1">
-                  Menu Name (English or Tamil)
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  required
-                  className="input-field"
-                  placeholder="sambar / சாம்பார்"
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <label className="block text-sm mb-1">Price</label>
-                  <input
-                    type="number"
-                    name="price"
-                    value={formData.price}
-                    onChange={handleInputChange}
-                    required
-                    className="input-field"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm mb-1">Stock</label>
-                  <input
-                    type="number"
-                    name="stock_qty"
-                    value={formData.stock_qty}
-                    onChange={handleInputChange}
-                    required
-                    className="input-field"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm mb-1">Unit</label>
-                  <input
-                    type="text"
-                    name="unit"
-                    value={formData.unit}
-                    onChange={handleInputChange}
-                    className="input-field"
-                    placeholder="Qty / kg / litres"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  name="is_enabled"
-                  checked={formData.is_enabled}
-                  onChange={handleInputChange}
-                />
-                <span className="ml-2 text-sm">Available Item</span>
-              </div>
-
-              <div className="flex gap-2 pt-4">
-                <button type="submit" className="btn-primary flex items-center">
-                  <Save className="w-5 h-5 mr-2" />
-                  {editingId ? 'Update' : 'Add'}
-                </button>
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="btn-secondary"
-                >
-                  Cancel
-                </button>
-              </div>
-            </form>
-
-          </div>
-        </div>
-      )}
+              <CreditCard /> Online
+            </button>
+          </>
+        ) : (
+          <button
+            className="btn-primary w-full mt-3"
+            onClick={saveBill}
+          >
+            <FileText /> Save Bill
+          </button>
+        )}
+      </div>
     </div>
   )
 }
