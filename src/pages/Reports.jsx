@@ -7,9 +7,10 @@ import { supabase } from '../lib/supabase'
 
 export default function Reports() {
   const [reportType, setReportType] = useState('daily')
+  const [shiftFilter, setShiftFilter] = useState('all') // all, shift1, shift2
   const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'))
-  const [reportData, setReportData] = useState({ summary: { totalRevenue: 0, totalOrders: 0, avgOrderValue: 0 }, itemWiseSales: [], dailyBreakdown: [] })
+  const [reportData, setReportData] = useState({ summary: { totalRevenue: 0, totalOrders: 0, avgOrderValue: 0 }, itemWiseSales: [], dailyBreakdown: [], shift1: { orders: 0, revenue: 0 }, shift2: { orders: 0, revenue: 0 } })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
@@ -27,7 +28,7 @@ export default function Reports() {
       .subscribe()
 
     return () => supabase.removeChannel(channel)
-  }, [startDate, endDate])
+  }, [startDate, endDate, shiftFilter])
 
   const updateDateRange = (type) => {
     const today = new Date()
@@ -63,6 +64,36 @@ export default function Reports() {
       const end = new Date(endDate)
       end.setHours(23, 59, 59, 999)
 
+      // 🔄 Fetch orders for both shift analysis and general data
+      const { data: ordersData, error: ordersError } = await supabase
+        .from('orders')
+        .select('id, order_number, status, total_amount, created_at, order_items (item_name, quantity, price, subtotal)')
+        .gte('created_at', start.toISOString())
+        .lte('created_at', end.toISOString())
+        .order('created_at', { ascending: false })
+
+      if (ordersError) throw ordersError
+
+      // 📊 Calculate shift-based data
+      let shift1Data = { orders: 0, revenue: 0, items: [] }
+      let shift2Data = { orders: 0, revenue: 0, items: [] }
+
+      ;(ordersData || []).forEach(order => {
+        const orderHour = new Date(order.created_at).getHours()
+        const isShift1 = orderHour < 17 // Before 5 PM
+        const revenue = order.total_amount || 0
+
+        if (isShift1) {
+          shift1Data.orders += 1
+          shift1Data.revenue += revenue
+          if (order.order_items) shift1Data.items.push(...order.order_items)
+        } else {
+          shift2Data.orders += 1
+          shift2Data.revenue += revenue
+          if (order.order_items) shift2Data.items.push(...order.order_items)
+        }
+      })
+
       const { data: summaryRows, error: summaryError } = await supabase
         .from('daily_sales_summary')
         .select('date, total_revenue, total_orders')
@@ -72,8 +103,21 @@ export default function Reports() {
 
       if (summaryError) throw summaryError
 
-      const totalRevenue = (summaryRows || []).reduce((s, r) => s + (r.total_revenue || 0), 0)
-      const totalOrders = (summaryRows || []).reduce((s, r) => s + (r.total_orders || 0), 0)
+      let totalRevenue = 0
+      let totalOrders = 0
+
+      // Apply shift filter if selected
+      if (shiftFilter === 'shift1') {
+        totalRevenue = shift1Data.revenue
+        totalOrders = shift1Data.orders
+      } else if (shiftFilter === 'shift2') {
+        totalRevenue = shift2Data.revenue
+        totalOrders = shift2Data.orders
+      } else {
+        totalRevenue = shift1Data.revenue + shift2Data.revenue
+        totalOrders = shift1Data.orders + shift2Data.orders
+      }
+
       const avgOrderValue = totalOrders ? totalRevenue / totalOrders : 0
 
       const dailyBreakdown = (summaryRows || []).map(r => ({
@@ -82,16 +126,18 @@ export default function Reports() {
         orders: r.total_orders || 0
       }))
 
-      const { data: itemRows, error: itemsError } = await supabase
-        .from('order_items')
-        .select('item_name, quantity, price, subtotal, created_at')
-        .gte('created_at', start.toISOString())
-        .lte('created_at', end.toISOString())
-
-      if (itemsError) throw itemsError
+      // Process items based on shift filter
+      let itemsToProcess = []
+      if (shiftFilter === 'shift1') {
+        itemsToProcess = shift1Data.items
+      } else if (shiftFilter === 'shift2') {
+        itemsToProcess = shift2Data.items
+      } else {
+        itemsToProcess = [...shift1Data.items, ...shift2Data.items]
+      }
 
       const byItem = {}
-      ;(itemRows || []).forEach(row => {
+      ;(itemsToProcess || []).forEach(row => {
         const key = row.item_name || 'Unknown'
         const qty = Number(row.quantity || 0)
         const revenue = Number(row.subtotal || (row.price || 0) * qty)
@@ -106,7 +152,9 @@ export default function Reports() {
       setReportData({
         summary: { totalRevenue, totalOrders, avgOrderValue },
         itemWiseSales,
-        dailyBreakdown
+        dailyBreakdown,
+        shift1: { orders: shift1Data.orders, revenue: shift1Data.revenue },
+        shift2: { orders: shift2Data.orders, revenue: shift2Data.revenue }
       })
     } catch (err) {
       console.error('Failed to load reports:', err)
@@ -144,7 +192,7 @@ export default function Reports() {
 
       {/* Report Controls */}
       <div className="card">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Report Type
@@ -158,6 +206,21 @@ export default function Reports() {
               <option value="weekly">Weekly</option>
               <option value="monthly">Monthly</option>
               <option value="custom">Custom Range</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Shift Filter
+            </label>
+            <select
+              value={shiftFilter}
+              onChange={(e) => setShiftFilter(e.target.value)}
+              className="input-field"
+            >
+              <option value="all">All Shifts</option>
+              <option value="shift1">Shift 1 (until 5 PM)</option>
+              <option value="shift2">Shift 2 (after 5 PM)</option>
             </select>
           </div>
 
@@ -197,6 +260,37 @@ export default function Reports() {
           </div>
         </div>
       </div>
+
+      {/* Shift Summary Cards */}
+      {reportType === 'daily' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="card bg-gradient-to-br from-yellow-50 to-orange-50 border-l-4 border-orange-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-orange-900">🌅 Shift 1</h3>
+                <p className="text-sm text-orange-700">Until 5:00 PM</p>
+              </div>
+              <div className="text-right">
+                <p className="text-3xl font-bold text-orange-600">₹{reportData.shift1.revenue.toFixed(0)}</p>
+                <p className="text-sm text-orange-700">{reportData.shift1.orders} orders</p>
+              </div>
+            </div>
+          </div>
+
+          <div className="card bg-gradient-to-br from-blue-50 to-indigo-50 border-l-4 border-blue-500">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-blue-900">🌙 Shift 2</h3>
+                <p className="text-sm text-blue-700">After 5:00 PM</p>
+              </div>
+              <div className="text-right">
+                <p className="text-3xl font-bold text-blue-600">₹{reportData.shift2.revenue.toFixed(0)}</p>
+                <p className="text-sm text-blue-700">{reportData.shift2.orders} orders</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex items-center justify-center h-64">

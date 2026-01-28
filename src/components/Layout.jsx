@@ -55,22 +55,26 @@ export default function Layout() {
     document.documentElement.classList.toggle('dark', isDarkMode)
   }, [isDarkMode])
 
-  /* ---------------- NAVIGATION ---------------- */
+  /* ---------------- NAVIGATION (ORDERED: Dashboard → Menu → Order → Stock → Reports → Settings) */
   const allNavigation = [
-    // 👑 ADMIN ONLY
-    { name: 'Dashboard', to: '/dashboard', icon: LayoutDashboard, roles: ['admin'] },
-    { name: 'Reports', to: '/reports', icon: FileText, roles: ['admin'] },
-    { name: 'Settings', to: '/settings', icon: Settings, roles: ['admin'] },
-
-    // 👑 ADMIN + 👷 STAFF
-    { name: 'Menu', to: '/menu', icon: UtensilsCrossed, roles: ['admin', 'staff'] },
-    { name: 'Orders', to: '/orders', icon: ShoppingCart, roles: ['admin', 'staff'], badge: orderCount },
-    { name: 'Stock', to: '/stock', icon: Package, roles: ['admin', 'staff'] }
+    // 1️⃣ DASHBOARD
+    { name: 'Dashboard', to: '/dashboard', icon: LayoutDashboard, roles: ['admin'], order: 1 },
+    // 2️⃣ MENU
+    { name: 'Menu', to: '/menu', icon: UtensilsCrossed, roles: ['admin', 'staff'], order: 2 },
+    // 3️⃣ ORDERS
+    { name: 'Orders', to: '/orders', icon: ShoppingCart, roles: ['admin', 'staff'], badge: orderCount, order: 3 },
+    // 4️⃣ STOCK
+    { name: 'Stock', to: '/stock', icon: Package, roles: ['admin', 'staff'], order: 4 },
+    // 5️⃣ REPORTS
+    { name: 'Reports', to: '/reports', icon: FileText, roles: ['admin'], order: 5 },
+    // 6️⃣ SETTINGS
+    { name: 'Settings', to: '/settings', icon: Settings, roles: ['admin'], order: 6 }
   ]
 
-
   const navigation = role
-    ? allNavigation.filter(item => item.roles.includes(role))
+    ? allNavigation
+        .filter(item => item.roles.includes(role))
+        .sort((a, b) => a.order - b.order)
     : allNavigation
 
   /* ---------------- LOGOUT ---------------- */

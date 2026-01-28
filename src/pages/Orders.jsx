@@ -3,6 +3,7 @@ import { CheckCircle, Clock, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { convertToTamil } from '../lib/tamilTranslations'
 import { supabase } from '../lib/supabase'
+import { triggerOrderNotification, requestNotificationPermission } from '../utils/notifications'
 
 export default function Orders() {
   const [orders, setOrders] = useState([])
@@ -11,6 +12,9 @@ export default function Orders() {
   const [error, setError] = useState(null)
 
   useEffect(() => {
+    // 🔔 Request notification permission on mount
+    requestNotificationPermission()
+    
     fetchOrders()
 
     const channel = supabase.channel('orders-realtime')
@@ -111,6 +115,9 @@ export default function Orders() {
                   if (updateError) {
                     console.error('Failed to update status:', updateError)
                     setError('Could not update order status.')
+                  } else {
+                    // 🔔 Trigger notification sound and badge
+                    triggerOrderNotification(o.orderNumber)
                   }
                 }}
               >
