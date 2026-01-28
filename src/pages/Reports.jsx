@@ -10,7 +10,7 @@ export default function Reports() {
   const [shiftFilter, setShiftFilter] = useState('all') // all, shift1, shift2
   const [startDate, setStartDate] = useState(format(new Date(), 'yyyy-MM-dd'))
   const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'))
-  const [reportData, setReportData] = useState({ summary: { totalRevenue: 0, totalOrders: 0, avgOrderValue: 0 }, itemWiseSales: [], dailyBreakdown: [], shift1: { orders: 0, revenue: 0 }, shift2: { orders: 0, revenue: 0 } })
+  const [reportData, setReportData] = useState({ summary: { totalRevenue: 0, totalOrders: 0, avgOrderValue: 0 }, itemWiseSales: [], dailyBreakdown: [], shift1: { orders: 0, revenue: 0 }, shift2: { orders: 0, revenue: 0 }, ordersDetail: [] })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
@@ -67,7 +67,7 @@ export default function Reports() {
       // 🔄 Fetch orders for both shift analysis and general data
       const { data: ordersData, error: ordersError } = await supabase
         .from('orders')
-        .select('id, order_number, status, total_amount, created_at, order_items (item_name, quantity, price, subtotal)')
+        .select('id, order_number, status, total_amount, payment_method, created_at, order_items (item_name, quantity, price, subtotal)')
         .gte('created_at', start.toISOString())
         .lte('created_at', end.toISOString())
         .order('created_at', { ascending: false })
@@ -154,7 +154,8 @@ export default function Reports() {
         itemWiseSales,
         dailyBreakdown,
         shift1: { orders: shift1Data.orders, revenue: shift1Data.revenue },
-        shift2: { orders: shift2Data.orders, revenue: shift2Data.revenue }
+        shift2: { orders: shift2Data.orders, revenue: shift2Data.revenue },
+        ordersDetail: ordersData || []
       })
     } catch (err) {
       console.error('Failed to load reports:', err)
@@ -180,6 +181,42 @@ export default function Reports() {
     a.href = url
     a.download = `sales-report-${startDate}-to-${endDate}.csv`
     a.click()
+  }
+
+  // 📊 Export sold items report with payment method and timing
+  const exportSoldItemsReport = () => {
+    const ordersToExport = shiftFilter === 'shift1' 
+      ? reportData.ordersDetail.filter(o => new Date(o.created_at).getHours() < 17)
+      : shiftFilter === 'shift2'
+      ? reportData.ordersDetail.filter(o => new Date(o.created_at).getHours() >= 17)
+      : reportData.ordersDetail
+
+    const csvRows = [
+      ['வரிசை எண்', 'Item Name (Tamil)', 'Quantity', 'Unit Price', 'Total', 'Payment Method', 'Order Time', 'Date'],
+      ...ordersToExport.flatMap((order, orderIdx) => 
+        order.order_items.map((item, itemIdx) => [
+          orderIdx + 1,
+          convertToTamil(item.item_name || 'Unknown'),
+          item.quantity,
+          item.price.toFixed(2),
+          item.subtotal.toFixed(2),
+          order.payment_method === 'cash' ? 'நகது (Cash)' : 'ஆன்லைன் (Online)',
+          format(new Date(order.created_at), 'HH:mm:ss'),
+          format(new Date(order.created_at), 'dd-MM-yyyy')
+        ])
+      )
+    ]
+
+    const csvContent = csvRows.map(row => 
+      row.map(cell => `"${cell}"`).join(',')
+    ).join('\n')
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `sold-items-report-${startDate}-to-${endDate}.csv`
+    link.click()
   }
 
   const COLORS = ['#f58700', '#2563eb', '#10b981', '#ef4444', '#8b5cf6', '#f59e0b', '#06b6d4', '#ec4899']
@@ -248,14 +285,22 @@ export default function Reports() {
             />
           </div>
 
-          <div className="flex items-end">
+          <div className="flex items-end gap-2">
             <button
               onClick={exportToCSV}
               disabled={reportData.itemWiseSales.length === 0}
               className="btn-primary w-full flex items-center justify-center disabled:opacity-50"
             >
               <Download className="w-5 h-5 mr-2" />
-              Export CSV
+              Summary
+            </button>
+            <button
+              onClick={exportSoldItemsReport}
+              disabled={reportData.ordersDetail.length === 0}
+              className="btn-secondary w-full flex items-center justify-center disabled:opacity-50"
+            >
+              <Download className="w-5 h-5 mr-2" />
+              Sold Items
             </button>
           </div>
         </div>

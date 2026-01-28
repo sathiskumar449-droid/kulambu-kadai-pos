@@ -34,7 +34,7 @@ export default function Orders() {
 
       const { data, error: fetchError } = await supabase
         .from('orders')
-        .select('id, order_number, status, total_amount, created_at, order_items (item_name, quantity, price, subtotal)')
+        .select('id, order_number, status, total_amount, payment_method, created_at, order_items (item_name, quantity, price, subtotal)')
         .order('created_at', { ascending: false })
 
       if (fetchError) throw fetchError
@@ -44,10 +44,12 @@ export default function Orders() {
         orderNumber: o.order_number,
         status: (o.status || 'PENDING').toUpperCase(),
         totalAmount: o.total_amount || 0,
+        paymentMethod: o.payment_method || 'cash',
         createdAt: o.created_at,
         items: (o.order_items || []).map(item => ({
           name: item.item_name,
           quantity: item.quantity,
+          price: item.price,
           subtotal: item.subtotal || (item.price || 0) * (item.quantity || 0)
         }))
       }))
@@ -83,14 +85,19 @@ export default function Orders() {
 
       {filtered.map(o => (
         <div key={o.id} className="card">
-          <div className="flex justify-between">
+          <div className="flex justify-between items-start">
             <div>
               <h3 className="font-bold">{o.orderNumber}</h3>
-              <p className="text-sm">
+              <p className="text-sm text-gray-600">
                 {o.createdAt ? format(new Date(o.createdAt), 'dd MMM yyyy, p') : ''}
               </p>
+              <p className="text-xs text-gray-500 mt-1">
+                {o.paymentMethod === 'cash' ? '💵 Cash' : '🏦 Online'}
+              </p>
             </div>
-            <span className="font-bold">₹{o.totalAmount}</span>
+            <div className="text-right">
+              <span className="font-bold text-lg">₹{o.totalAmount.toFixed(2)}</span>
+            </div>
           </div>
 
           <div className="mt-2">

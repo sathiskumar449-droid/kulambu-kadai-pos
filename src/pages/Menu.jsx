@@ -118,7 +118,8 @@ export default function Menu() {
         .insert([{
           order_number: orderNumber,
           status: 'Pending',
-          total_amount: total
+          total_amount: total,
+          payment_method: selectedPayment
         }])
         .select()
         .single()
