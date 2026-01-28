@@ -21,8 +21,15 @@ export default function Login() {
 
   // 🔐 GOOGLE LOGIN (LIVE)
   const handleLogin = async () => {
+    const redirectUrl = DEV_MODE 
+      ? "http://localhost:3002/auth/callback" 
+      : "https://kulambukadipos.vercel.app/auth/callback"
+    
     await supabase.auth.signInWithOAuth({
-      provider: "google"
+      provider: "google",
+      options: {
+        redirectTo: redirectUrl
+      }
     })
   }
 
