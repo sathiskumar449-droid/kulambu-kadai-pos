@@ -28,26 +28,52 @@ export default function Layout() {
   /* ---------------- ORDERS BADGE ---------------- */
   useEffect(() => {
     const loadPending = async () => {
-      const { count } = await supabase
+      const { count, error, data } = await supabase
         .from('orders')
-        .select('id', { count: 'exact', head: true })
-        .eq('status', 'PENDING')
+        .select('id, status', { count: 'exact', head: false })
+        .eq('status', 'Pending')
 
-      if (typeof count === 'number') setOrderCount(count)
+      console.log('📊 Badge Debug:', { count, error, data })
+      
+      if (error) {
+        console.error('Badge Error:', error)
+      }
+      
+      if (typeof count === 'number') {
+        console.log('✅ Setting badge count:', count)
+        setOrderCount(count)
+      }
     }
 
+    // Load initial count
     loadPending()
 
+    // Set up realtime subscription
     const channel = supabase
-      .channel('layout-orders-badge')
+      .channel('layout-orders-badge-v2')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders' },
-        loadPending
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'orders'
+        },
+        (payload) => {
+          console.log('🔔 Order changed in realtime:', payload)
+          loadPending()
+        }
       )
-      .subscribe()
+      .subscribe((status) => {
+        console.log('📡 Realtime subscription status:', status)
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Successfully subscribed to orders changes')
+        }
+      })
 
-    return () => supabase.removeChannel(channel)
+    return () => {
+      console.log('🧹 Cleaning up subscription')
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   /* ---------------- DARK MODE ---------------- */
@@ -70,6 +96,8 @@ export default function Layout() {
     // 6️⃣ SETTINGS
     { name: 'Settings', to: '/settings', icon: Settings, roles: ['admin'], order: 6 }
   ]
+
+  console.log('🔢 Current orderCount:', orderCount)
 
   const navigation = role
     ? allNavigation
@@ -144,6 +172,11 @@ export default function Layout() {
                     >
                       <item.icon size={18} />
                       {item.name}
+                      {item.badge !== undefined && item.badge >= 0 && (
+                        <span className="ml-auto bg-red-500 text-white text-xs px-2 py-1 rounded-full min-w-[20px] text-center">
+                          {item.badge}
+                        </span>
+                      )}
                     </NavLink>
                   ))}
                 </div>
@@ -182,8 +215,8 @@ export default function Layout() {
               >
                 <item.icon size={18} />
                 {item.name}
-                {item.badge > 0 && (
-                  <span className="ml-auto bg-red-500 text-white text-xs px-2 rounded">
+                {item.badge !== undefined && item.badge >= 0 && (
+                  <span className="ml-auto bg-red-500 text-white text-xs px-2 py-1 rounded-full min-w-[20px] text-center">
                     {item.badge}
                   </span>
                 )}
