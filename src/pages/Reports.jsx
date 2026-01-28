@@ -311,22 +311,14 @@ export default function Reports() {
             />
           </div>
 
-          <div className="flex items-end gap-2">
-            <button
-              onClick={exportToCSV}
-              disabled={reportData.itemWiseSales.length === 0}
-              className="btn-primary w-full flex items-center justify-center disabled:opacity-50"
-            >
-              <Download className="w-5 h-5 mr-2" />
-              Summary
-            </button>
+          <div className="flex items-end">
             <button
               onClick={exportSoldItemsReport}
               disabled={reportData.ordersDetail.length === 0}
-              className="btn-secondary w-full flex items-center justify-center disabled:opacity-50"
+              className="btn-primary w-full flex items-center justify-center disabled:opacity-50"
             >
               <Download className="w-5 h-5 mr-2" />
-              Sold Items
+              Export Report
             </button>
           </div>
         </div>
