@@ -126,6 +126,15 @@ export default function Orders() {
               <button
                 className="btn-primary"
                 onClick={async () => {
+                  // Optimistically update local state
+                  setOrders(prevOrders =>
+                    prevOrders.map(order =>
+                      order.id === o.id
+                        ? { ...order, status: 'PLACED' }
+                        : order
+                    )
+                  )
+
                   const { error: updateError } = await supabase
                     .from('orders')
                     .update({ status: 'PLACED' })
@@ -134,6 +143,8 @@ export default function Orders() {
                   if (updateError) {
                     console.error('Failed to update status:', updateError)
                     setError('Could not update order status.')
+                    // Revert optimistic update on error
+                    fetchOrders()
                   } else {
                     // 🔔 Trigger notification sound and badge
                     triggerOrderNotification(o.orderNumber)
@@ -146,6 +157,9 @@ export default function Orders() {
             <button
               className="btn-secondary"
               onClick={async () => {
+                // Optimistically update local state
+                setOrders(prevOrders => prevOrders.filter(order => order.id !== o.id))
+
                 const { error: deleteError } = await supabase
                   .from('orders')
                   .delete()
@@ -153,6 +167,8 @@ export default function Orders() {
                 if (deleteError) {
                   console.error('Delete failed:', deleteError)
                   setError('Could not delete order.')
+                  // Revert optimistic update on error
+                  fetchOrders()
                 }
               }}
             >

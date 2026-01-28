@@ -28,19 +28,21 @@ export default function Layout() {
   /* ---------------- ORDERS BADGE ---------------- */
   useEffect(() => {
     const loadPending = async () => {
+      // Query for both 'Pending' and 'PENDING' to handle case variations
       const { count, error, data } = await supabase
         .from('orders')
-        .select('id, status', { count: 'exact', head: false })
-        .eq('status', 'Pending')
+        .select('*', { count: 'exact', head: false })
+        .or('status.eq.Pending,status.eq.PENDING')
 
-      console.log('📊 Badge Debug:', { count, error, data })
-      
+      console.log('🔵 Badge Query Result:', { count, error, statuses: data?.map(o => o.status) })
+
       if (error) {
-        console.error('Badge Error:', error)
+        console.error('❌ Badge Error:', error)
+        return
       }
       
       if (typeof count === 'number') {
-        console.log('✅ Setting badge count:', count)
+        console.log('✅ Setting badge to:', count)
         setOrderCount(count)
       }
     }
@@ -48,30 +50,60 @@ export default function Layout() {
     // Load initial count
     loadPending()
 
+    // Poll every 3 seconds as backup (in case realtime doesn't work)
+    const pollInterval = setInterval(loadPending, 3000)
+
     // Set up realtime subscription
     const channel = supabase
-      .channel('layout-orders-badge-v2')
+      .channel('layout-orders-badge-v3')
       .on(
         'postgres_changes',
         { 
-          event: '*', 
+          event: 'INSERT', 
           schema: 'public', 
           table: 'orders'
         },
         (payload) => {
-          console.log('🔔 Order changed in realtime:', payload)
+          console.log('🔔 NEW ORDER INSERTED:', payload)
+          loadPending()
+        }
+      )
+      .on(
+        'postgres_changes',
+        { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'orders'
+        },
+        (payload) => {
+          console.log('🔔 ORDER UPDATED:', payload)
+          loadPending()
+        }
+      )
+      .on(
+        'postgres_changes',
+        { 
+          event: 'DELETE', 
+          schema: 'public', 
+          table: 'orders'
+        },
+        (payload) => {
+          console.log('🔔 ORDER DELETED:', payload)
           loadPending()
         }
       )
       .subscribe((status) => {
-        console.log('📡 Realtime subscription status:', status)
+        console.log('📡 Subscription status:', status)
         if (status === 'SUBSCRIBED') {
-          console.log('✅ Successfully subscribed to orders changes')
+          console.log('✅ Successfully subscribed to orders table')
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Realtime subscription failed - using polling only')
         }
       })
 
     return () => {
-      console.log('🧹 Cleaning up subscription')
+      console.log('🧹 Cleaning up badge subscription and polling')
+      clearInterval(pollInterval)
       supabase.removeChannel(channel)
     }
   }, [])
