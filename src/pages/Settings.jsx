@@ -175,7 +175,7 @@ export default function Settings() {
             <div>
               <h4 className="text-lg font-semibold">{item.name}</h4>
               <p className="text-sm text-gray-600">
-                ₹{item.price} • Stock: {item.stock_qty}
+                ₹{item.price} • Stock: {item.daily_stock_quantity} {item.unit}
               </p>
             </div>
             <div className="flex gap-2">
