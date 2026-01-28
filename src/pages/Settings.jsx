@@ -175,7 +175,7 @@ export default function Settings() {
             <div>
               <h4 className="text-lg font-semibold">{item.name}</h4>
               <p className="text-sm text-gray-600">
-                ₹{item.price} • Stock: {item.daily_stock_quantity} {item.unit}
+                ₹{item.price} • Stock: {item.daily_stock_quantity} QTY
               </p>
             </div>
             <div className="flex gap-2">
@@ -231,7 +231,7 @@ export default function Settings() {
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm mb-1">Price</label>
                   <input
@@ -245,7 +245,7 @@ export default function Settings() {
                 </div>
 
                 <div>
-                  <label className="block text-sm mb-1">Stock</label>
+                  <label className="block text-sm mb-1">Stock QTY</label>
                   <input
                     type="number"
                     name="stock_qty"
@@ -254,25 +254,6 @@ export default function Settings() {
                     required
                     className="input-field"
                   />
-                </div>
-
-                <div>
-                  <label className="block text-sm mb-1">Unit</label>
-                  <select
-                    name="unit"
-                    value={formData.unit}
-                    onChange={handleInputChange}
-                    className="input-field"
-                  >
-                    <option value="bowl">Bowl</option>
-                    <option value="piece">Piece</option>
-                    <option value="pieces">Pieces</option>
-                    <option value="serving">Serving</option>
-                    <option value="litres">Litres</option>
-                    <option value="kg">KG</option>
-                    <option value="cup">Cup</option>
-                    <option value="plate">Plate</option>
-                  </select>
                 </div>
               </div>
 
