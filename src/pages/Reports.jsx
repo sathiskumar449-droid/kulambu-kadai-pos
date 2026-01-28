@@ -65,14 +65,27 @@ export default function Reports() {
       end.setHours(23, 59, 59, 999)
 
       // 🔄 Fetch orders for both shift analysis and general data
-      const { data: ordersData, error: ordersError } = await supabase
+      let { data: ordersData, error: ordersError } = await supabase
         .from('orders')
         .select('id, order_number, status, total_amount, payment_method, created_at, order_items (item_name, quantity, price, subtotal)')
         .gte('created_at', start.toISOString())
         .lte('created_at', end.toISOString())
         .order('created_at', { ascending: false })
 
-      if (ordersError) throw ordersError
+      // If payment_method column doesn't exist, fetch without it
+      if (ordersError && ordersError.message.includes('payment_method')) {
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('orders')
+          .select('id, order_number, status, total_amount, created_at, order_items (item_name, quantity, price, subtotal)')
+          .gte('created_at', start.toISOString())
+          .lte('created_at', end.toISOString())
+          .order('created_at', { ascending: false })
+        
+        if (fallbackError) throw fallbackError
+        ordersData = fallbackData
+      } else if (ordersError) {
+        throw ordersError
+      }
 
       // 📊 Calculate shift-based data
       let shift1Data = { orders: 0, revenue: 0, items: [] }

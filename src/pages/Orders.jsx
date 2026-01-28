@@ -32,12 +32,24 @@ export default function Orders() {
       setLoading(true)
       setError(null)
 
-      const { data, error: fetchError } = await supabase
+      // Try to fetch with payment_method, fallback if column doesn't exist
+      let { data, error: fetchError } = await supabase
         .from('orders')
         .select('id, order_number, status, total_amount, payment_method, created_at, order_items (item_name, quantity, price, subtotal)')
         .order('created_at', { ascending: false })
 
-      if (fetchError) throw fetchError
+      // If payment_method column doesn't exist, fetch without it
+      if (fetchError && fetchError.message.includes('payment_method')) {
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('orders')
+          .select('id, order_number, status, total_amount, created_at, order_items (item_name, quantity, price, subtotal)')
+          .order('created_at', { ascending: false })
+        
+        if (fallbackError) throw fallbackError
+        data = fallbackData
+      } else if (fetchError) {
+        throw fetchError
+      }
 
       const normalized = (data || []).map(o => ({
         id: o.id,

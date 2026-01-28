@@ -124,10 +124,27 @@ export default function Menu() {
         .select()
         .single()
 
-      if (orderError) throw orderError
+      // If payment_method column doesn't exist, try without it
+      let finalOrder = order
+      if (orderError && orderError.message.includes('payment_method')) {
+        const { data: fallbackOrder, error: fallbackError } = await supabase
+          .from('orders')
+          .insert([{
+            order_number: orderNumber,
+            status: 'Pending',
+            total_amount: total
+          }])
+          .select()
+          .single()
+        
+        if (fallbackError) throw fallbackError
+        finalOrder = fallbackOrder
+      } else if (orderError) {
+        throw orderError
+      }
 
       const itemsPayload = cart.map(i => ({
-        order_id: order.id,
+        order_id: finalOrder.id,
         menu_item_id: i.id,
         item_name: i.name, // Tamil already stored
         quantity: i.quantity,

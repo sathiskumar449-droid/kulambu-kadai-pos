@@ -25,6 +25,7 @@ CREATE TABLE orders (
   order_number VARCHAR(50) UNIQUE NOT NULL,
   total_amount DECIMAL(10, 2) NOT NULL,
   status VARCHAR(50) DEFAULT 'Pending',
+  payment_method VARCHAR(50) DEFAULT 'cash',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   completed_at TIMESTAMP WITH TIME ZONE
 );
