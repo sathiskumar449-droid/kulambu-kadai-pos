@@ -156,8 +156,12 @@ export function isTamil(text) {
 
 /**
  * Search for items with Tanglish support
- * Matches both Tamil and English variations
- * @param {string} searchQuery - Search term (English or Tamil)
+ * Matches both Tamil and English variations with partial/fuzzy matching
+ * Examples:
+ *   "chi" matches "chicken"
+ *   "vaa" matches "vagai", items with "vaa" in name
+ *   "sam" matches "sambar"
+ * @param {string} searchQuery - Search term (English or Tamil) - partial allowed
  * @param {string} itemName - Item name to search in
  * @returns {boolean} - True if item matches search
  */
@@ -167,21 +171,34 @@ export function searchWithTanglish(searchQuery, itemName) {
   const query = searchQuery.trim().toLowerCase();
   const item = itemName.toLowerCase();
 
-  // Direct match
+  // 1. Direct partial match (case-insensitive substring)
   if (item.includes(query)) return true;
 
-  // Check if query is English - convert to Tamil and check
+  // 2. If query is English/Tanglish - try to match against dictionary keys
   if (!isTamil(query)) {
+    // Check all English keys in dictionary for partial matches
+    for (const [english, tamil] of Object.entries(ENGLISH_TO_TAMIL)) {
+      // Partial match: if query is the start of an English word
+      if (english.includes(query) || english.startsWith(query)) {
+        if (item.includes(tamil.toLowerCase())) {
+          return true;
+        }
+      }
+    }
+
+    // Convert partial English to Tamil and check
     const tamilVersion = convertToTamil(query);
     if (tamilVersion !== query && item.includes(tamilVersion.toLowerCase())) {
       return true;
     }
   }
 
-  // Check if any dictionary word matches
-  for (const [english, tamil] of Object.entries(ENGLISH_TO_TAMIL)) {
-    if ((query.includes(english) || query === english) && item.includes(tamil.toLowerCase())) {
-      return true;
+  // 3. For Tamil queries, check if any Tamil word in dictionary starts with it
+  if (isTamil(query)) {
+    for (const [english, tamil] of Object.entries(ENGLISH_TO_TAMIL)) {
+      if (tamil.toLowerCase().includes(query)) {
+        return true;
+      }
     }
   }
 
