@@ -13,6 +13,7 @@ import {
 import { supabase } from '../lib/supabase'
 import { convertToTamil } from '../lib/tamilTranslations'
 import { triggerOrderNotification, requestNotificationPermission } from '../utils/notifications'
+import Toast from '../components/Toast'
 
 export default function Menu() {
   const [menuItems, setMenuItems] = useState([])
@@ -25,6 +26,8 @@ export default function Menu() {
   const [selectedPayment, setSelectedPayment] = useState(null)
   const [rowQuantities, setRowQuantities] = useState({})
   const [addedFlash, setAddedFlash] = useState({})
+  const [showToast, setShowToast] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
 
   /* ================= MENU LOAD (SUPABASE) ================= */
   useEffect(() => {
@@ -169,6 +172,10 @@ export default function Menu() {
 
       // 🔔 Trigger notification sound and browser notification
       triggerOrderNotification(orderNumber)
+
+      // Show success toast
+      setToastMessage('🔔 Items Ordered Successfully!')
+      setShowToast(true)
 
       setCart([])
       setSelectedPayment(null)
@@ -342,6 +349,14 @@ export default function Menu() {
           </button>
         )}
       </div>
+
+      {/* Toast Notification */}
+      {showToast && (
+        <Toast 
+          message={toastMessage} 
+          onClose={() => setShowToast(false)} 
+        />
+      )}
     </div>
   )
 }

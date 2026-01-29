@@ -78,7 +78,9 @@ export default function Orders() {
   const filtered =
     filter === 'ALL'
       ? orders
-      : orders.filter(o => o.status === filter)
+      : filter === 'PENDING'
+        ? orders.filter(o => o.status === 'PENDING')
+        : orders.filter(o => o.status === 'PLACED')
 
   return (
     <div className="space-y-4">
@@ -89,7 +91,23 @@ export default function Orders() {
 
       <div className="flex gap-2">
         {['ALL', 'PENDING', 'PLACED'].map(s => (
-          <button key={s} onClick={() => setFilter(s)} className="btn-secondary">
+          <button 
+            key={s} 
+            onClick={() => setFilter(s)} 
+            className={`px-4 py-2 rounded-lg font-medium transition-all duration-200 active:scale-95 active:shadow-inner ${
+              filter === s 
+                ? s === 'ALL' 
+                  ? 'bg-blue-500 text-white shadow-lg' 
+                  : s === 'PENDING' 
+                    ? 'bg-yellow-500 text-white shadow-lg' 
+                    : 'bg-green-500 text-white shadow-lg'
+                : s === 'ALL'
+                  ? 'bg-blue-100 text-blue-700 hover:bg-blue-200'
+                  : s === 'PENDING'
+                    ? 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+                    : 'bg-green-100 text-green-700 hover:bg-green-200'
+            }`}
+          >
             {s}
           </button>
         ))}
@@ -99,7 +117,16 @@ export default function Orders() {
         <div key={o.id} className="card">
           <div className="flex justify-between items-start">
             <div>
-              <h3 className="font-bold">{o.orderNumber}</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="font-bold">{o.orderNumber}</h3>
+                <span className={`px-2 py-1 rounded text-xs font-semibold ${
+                  o.status === 'PENDING' 
+                    ? 'bg-yellow-100 text-yellow-700' 
+                    : 'bg-green-100 text-green-700'
+                }`}>
+                  {o.status}
+                </span>
+              </div>
               <p className="text-sm text-gray-600">
                 {o.createdAt ? format(new Date(o.createdAt), 'dd MMM yyyy, p') : ''}
               </p>

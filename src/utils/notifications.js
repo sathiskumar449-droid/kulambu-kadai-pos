@@ -39,20 +39,10 @@ export const playNotificationSound = () => {
   }
 }
 
-// 🔔 Show browser notification
+// 🔔 Show browser notification (disabled - using custom toast instead)
 export const showBrowserNotification = (orderNumber) => {
-  if ("Notification" in window && Notification.permission === "granted") {
-    new Notification("✅ Order Saved Successfully!", {
-      body: `Order #${orderNumber} has been placed and saved`,
-      icon: "📋",
-      badge: "🛒",
-      tag: "order-notification",
-      requireInteraction: false
-    })
-    console.log("✅ Browser notification shown")
-  } else {
-    console.log("⚠️ Notification permission not granted")
-  }
+  // Disabled browser notification in favor of custom toast
+  console.log("✅ Using custom toast notification instead of browser notification")
 }
 
 // 🔔 Request notification permission
