@@ -86,7 +86,7 @@ export default function Orders() {
         : orders.filter(o => o.status === 'PLACED')
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 flex flex-col min-h-screen">
       {/* Success Toast */}
       {showToast && <Toast message={toastMessage} onClose={() => setShowToast(false)} />}
       
@@ -95,7 +95,8 @@ export default function Orders() {
         <div className="card bg-red-50 text-red-700 p-3">{error}</div>
       )}
 
-      <div className="flex gap-2">
+      {/* Filter Buttons - Top on Desktop, Bottom on Mobile */}
+      <div className="flex gap-2 order-3 md:order-1">
         {['ALL', 'PENDING', 'PLACED'].map(s => (
           <button 
             key={s} 
@@ -119,8 +120,10 @@ export default function Orders() {
         ))}
       </div>
 
-      {filtered.map(o => (
-        <div key={o.id} className="card">
+      {/* Orders List - Middle */}
+      <div className="flex-1 order-2 md:order-2">
+        {filtered.map(o => (
+          <div key={o.id} className="card">
           <div className="flex justify-between items-start">
             <div>
               <div className="flex items-center gap-2">
@@ -216,6 +219,7 @@ export default function Orders() {
       ))}
 
       {filtered.length === 0 && <p>No orders</p>}
+      </div>
     </div>
   )
 }
