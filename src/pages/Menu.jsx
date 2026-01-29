@@ -12,7 +12,7 @@ import {
   X
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { convertToTamil } from '../lib/tamilTranslations'
+import { convertToTamil, searchWithTanglish } from '../lib/tamilTranslations'
 import { triggerOrderNotification, requestNotificationPermission } from '../utils/notifications'
 import Toast from '../components/Toast'
 
@@ -191,7 +191,7 @@ export default function Menu() {
   }
 
   const filteredItems = menuItems.filter(i => {
-    const matchesSearch = i.name.toLowerCase().includes(searchQuery.toLowerCase())
+    const matchesSearch = searchWithTanglish(searchQuery, i.name)
     const matchesCategory = selectedCategory === 'all' || i.category === selectedCategory
     return matchesSearch && matchesCategory
   })
@@ -223,7 +223,7 @@ export default function Menu() {
           {/* Search Bar */}
           <input
             className="w-full px-4 py-2.5 md:py-3 text-base rounded-lg border border-gray-300 focus:border-orange-500 focus:outline-none transition"
-            placeholder="Search items…"
+            placeholder="Search items (sambar, rasam, etc)…"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
           />

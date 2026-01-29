@@ -154,8 +154,43 @@ export function isTamil(text) {
   return /[\u0B80-\u0BFF]/.test(text);
 }
 
+/**
+ * Search for items with Tanglish support
+ * Matches both Tamil and English variations
+ * @param {string} searchQuery - Search term (English or Tamil)
+ * @param {string} itemName - Item name to search in
+ * @returns {boolean} - True if item matches search
+ */
+export function searchWithTanglish(searchQuery, itemName) {
+  if (!searchQuery || !itemName) return false;
+
+  const query = searchQuery.trim().toLowerCase();
+  const item = itemName.toLowerCase();
+
+  // Direct match
+  if (item.includes(query)) return true;
+
+  // Check if query is English - convert to Tamil and check
+  if (!isTamil(query)) {
+    const tamilVersion = convertToTamil(query);
+    if (tamilVersion !== query && item.includes(tamilVersion.toLowerCase())) {
+      return true;
+    }
+  }
+
+  // Check if any dictionary word matches
+  for (const [english, tamil] of Object.entries(ENGLISH_TO_TAMIL)) {
+    if ((query.includes(english) || query === english) && item.includes(tamil.toLowerCase())) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export default {
   convertToTamil,
   isTamil,
+  searchWithTanglish,
   ENGLISH_TO_TAMIL,
 };
