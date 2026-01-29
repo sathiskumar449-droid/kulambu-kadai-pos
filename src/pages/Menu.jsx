@@ -253,7 +253,7 @@ export default function Menu() {
       <div className="p-3 md:p-4 space-y-3">
         {filteredItems.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
-            कोई आइटम नहीं मिला
+            No items found
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

@@ -126,7 +126,9 @@ export default function Layout() {
     // 5️⃣ REPORTS
     { name: 'Reports', to: '/reports', icon: FileText, roles: ['admin'], order: 5 },
     // 6️⃣ SETTINGS
-    { name: 'Settings', to: '/settings', icon: Settings, roles: ['admin'], order: 6 }
+    { name: 'Settings', to: '/settings', icon: Settings, roles: ['admin'], order: 6 },
+    // 7️⃣ LOGOUT (Mobile only)
+    { name: 'Logout', to: '#', icon: LogOut, roles: ['admin', 'staff'], order: 7, isLogout: true }
   ]
 
   console.log('🔢 Current orderCount:', orderCount)
@@ -176,32 +178,47 @@ export default function Layout() {
       {/* MOBILE BOTTOM NAVIGATION - Enhanced */}
       <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white dark:bg-gray-800 shadow-2xl border-t-2 border-orange-500 dark:border-orange-600">
         <nav className="flex justify-around items-center">
-          {navigation.map(item => (
-            <NavLink
-              key={item.name}
-              to={item.to}
-              onClick={() => setMobileMenuOpen(false)}
-              className={({ isActive }) =>
-                `flex flex-col items-center justify-center py-3 px-2 flex-1 text-xs md:text-sm relative transition-all nav-button-hover ${
-                  isActive
-                    ? 'bg-orange-50 dark:bg-gray-700 text-orange-600 border-t-4 border-orange-500 font-bold'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-orange-500 active:bg-gray-100'
-                }`
-              }
-            >
-              <item.icon size={22} className="mb-0.5" />
-              <span className="text-center line-clamp-1 text-xs">{item.name}</span>
-              {item.badge !== undefined && item.badge > 0 && (
-                <motion.span 
-                  className="absolute -top-1 -right-1 bg-red-600 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center font-bold shadow-lg"
-                  animate={{ scale: [1, 1.2, 1] }}
-                  transition={{ duration: 0.5, repeat: Infinity }}
+          {navigation.map(item => {
+            if (item.isLogout) {
+              return (
+                <button
+                  key={item.name}
+                  onClick={handleLogout}
+                  className="flex flex-col items-center justify-center py-3 px-2 flex-1 text-xs md:text-sm relative transition-all nav-button-hover text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 active:bg-red-100"
                 >
-                  {item.badge > 99 ? '99+' : item.badge}
-                </motion.span>
-              )}
-            </NavLink>
-          ))}
+                  <item.icon size={22} className="mb-0.5" />
+                  <span className="text-center line-clamp-1 text-xs">{item.name}</span>
+                </button>
+              )
+            }
+            
+            return (
+              <NavLink
+                key={item.name}
+                to={item.to}
+                onClick={() => setMobileMenuOpen(false)}
+                className={({ isActive }) =>
+                  `flex flex-col items-center justify-center py-3 px-2 flex-1 text-xs md:text-sm relative transition-all nav-button-hover ${
+                    isActive
+                      ? 'bg-orange-50 dark:bg-gray-700 text-orange-600 border-t-4 border-orange-500 font-bold'
+                      : 'text-gray-600 dark:text-gray-400 hover:text-orange-500 active:bg-gray-100'
+                  }`
+                }
+              >
+                <item.icon size={22} className="mb-0.5" />
+                <span className="text-center line-clamp-1 text-xs">{item.name}</span>
+                {item.badge !== undefined && item.badge > 0 && (
+                  <motion.span 
+                    className="absolute -top-1 -right-1 bg-red-600 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center font-bold shadow-lg"
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ duration: 0.5, repeat: Infinity }}
+                  >
+                    {item.badge > 99 ? '99+' : item.badge}
+                  </motion.span>
+                )}
+              </NavLink>
+            )
+          })}
         </nav>
       </div>
 
@@ -255,19 +272,6 @@ export default function Layout() {
       {/* MAIN CONTENT */}
       <div className="flex-1 overflow-auto pt-16 md:pt-0 pb-20 md:pb-0 bg-gray-50 dark:bg-gray-900">
         <Outlet />
-      </div>
-
-      {/* MOBILE LOGOUT (floating button for mobile) */}
-      <div className="fixed bottom-20 right-4 md:hidden">
-        <motion.button
-          onClick={handleLogout}
-          className="flex items-center justify-center p-4 rounded-full bg-red-500 text-white hover:bg-red-600 active:scale-95 shadow-lg font-bold transition"
-          title="Logout"
-          whileHover={{ scale: 1.1 }}
-          whileTap={{ scale: 0.95 }}
-        >
-          <LogOut size={24} />
-        </motion.button>
       </div>
     </div>
   )
