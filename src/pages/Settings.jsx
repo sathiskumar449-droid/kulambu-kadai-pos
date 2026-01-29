@@ -204,7 +204,7 @@ export default function Settings() {
                             ? 'bg-green-100 text-green-700' 
                             : 'bg-gray-200 text-gray-600'
                         }`}>
-                          {item.is_enabled ? 'Active' : 'Inactive'}
+                          {item.is_enabled ? 'Available' : 'Inactive'}
                         </span>
                       </div>
                       <p className="text-sm text-gray-500 mb-1">
