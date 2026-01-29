@@ -4,12 +4,12 @@ import emailjs from '@emailjs/browser'
 export default function Login() {
 
   // 🔐 CHANGE YOUR CREDENTIALS HERE
-  const ADMIN_USERNAME = "admin"
-  const ADMIN_PASSWORD = "admin123"
+  const ADMIN_USERNAME = "kulambukadai"
+  const ADMIN_PASSWORD = "kulambukadai@123"
   const ADMIN_EMAIL = "admin@kulambukadai.com"  // ← Change to your email
   
   const STAFF_USERNAME = "staff"
-  const STAFF_PASSWORD = "staff123"
+  const STAFF_PASSWORD = "staff@kulambukadai"
   const STAFF_EMAIL = "staff@kulambukadai.com"  // ← Change to your email
 
   // 📧 EmailJS Configuration (Get from emailjs.com after signup)
