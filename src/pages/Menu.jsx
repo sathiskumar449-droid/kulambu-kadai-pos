@@ -191,7 +191,7 @@ export default function Menu() {
   }
 
   const filteredItems = menuItems.filter(i => {
-    const matchesSearch = searchWithTanglish(searchQuery, i.name)
+    const matchesSearch = !searchQuery || searchWithTanglish(searchQuery, i.name)
     const matchesCategory = selectedCategory === 'all' || i.category === selectedCategory
     return matchesSearch && matchesCategory
   })
