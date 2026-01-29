@@ -6,7 +6,9 @@ import {
   ShoppingCart,
   CreditCard,
   DollarSign,
-  FileText
+  FileText,
+  Leaf,
+  Drumstick
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { convertToTamil } from '../lib/tamilTranslations'
@@ -39,14 +41,20 @@ export default function Menu() {
 
       const { data, error: fetchError } = await supabase
         .from('menu_items')
-        .select('id, name, price, is_enabled')
+        .select('id, name, price, is_enabled, category')
         .eq('is_enabled', true)
         .order('created_at')
 
       if (fetchError) throw fetchError
 
-      setMenuItems(data || [])
-      setRowQuantities((data || []).reduce((a, i) => ({ ...a, [i.id]: 1 }), {}))
+      // Normalize category field (handle null, empty, inconsistent values)
+      const normalizedData = (data || []).map(item => ({
+        ...item,
+        category: (item.category || 'veg').toLowerCase().trim()
+      }))
+
+      setMenuItems(normalizedData)
+      setRowQuantities((normalizedData || []).reduce((a, i) => ({ ...a, [i.id]: 1 }), {}))
     } catch (err) {
       console.error('Failed to load menu:', err)
       setLoadError('Unable to load menu items. Please try again.')

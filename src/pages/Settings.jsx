@@ -168,32 +168,57 @@ export default function Settings() {
         <div className="card bg-red-50 text-red-700 p-3">{error}</div>
       )}
 
-      {/* MENU LIST */}
-      <div className="grid gap-4">
-        {menuItems.map(item => (
-          <div key={item.id} className="card flex justify-between items-center">
-            <div>
-              <h4 className="text-lg font-semibold">{item.name}</h4>
-              <p className="text-sm text-gray-600">
-                ₹{item.price} • Stock: {item.daily_stock_quantity} QTY
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => handleEdit(item)}
-                className="p-2 bg-blue-100 text-blue-600 rounded"
-              >
-                <Edit2 className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => handleDelete(item.id)}
-                className="p-2 bg-red-100 text-red-600 rounded"
-              >
-                <Trash2 className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-        ))}
+      {/* MENU LIST - TABLE VIEW */}
+      <div className="card">
+        <table className="w-full">
+          <thead>
+            <tr>
+              <th>S.No</th>
+              <th>Item Name</th>
+              <th>Price</th>
+              <th>Stock</th>
+              <th>Status</th>
+              <th className="text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {menuItems.map((item, index) => (
+              <tr key={item.id}>
+                <td>{index + 1}</td>
+                <td className="font-medium">{item.name}</td>
+                <td>₹{item.price}</td>
+                <td>{item.daily_stock_quantity} {item.unit}</td>
+                <td>
+                  <span className={`px-2 py-1 rounded text-xs ${
+                    item.is_enabled 
+                      ? 'bg-green-100 text-green-700' 
+                      : 'bg-gray-100 text-gray-600'
+                  }`}>
+                    {item.is_enabled ? 'Active' : 'Inactive'}
+                  </span>
+                </td>
+                <td>
+                  <div className="flex gap-2 justify-center">
+                    <button
+                      onClick={() => handleEdit(item)}
+                      className="p-2 bg-blue-100 text-blue-600 rounded hover:bg-blue-200"
+                      title="Edit"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(item.id)}
+                      className="p-2 bg-red-100 text-red-600 rounded hover:bg-red-200"
+                      title="Delete"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       {/* MODAL */}
