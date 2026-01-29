@@ -232,7 +232,9 @@ export default function Layout() {
         </div>
         <nav className="p-4 space-y-2 flex flex-col flex-1">
           <div className="flex-1 space-y-2">
-            {navigation.map(item => (
+            {navigation
+              .filter(item => !item.isLogout) // Exclude Logout from desktop navigation
+              .map(item => (
               <NavLink
                 key={item.name}
                 to={item.to}
