@@ -175,7 +175,7 @@ export default function Layout() {
               key={item.name}
               to={item.to}
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center py-3 px-2 flex-1 text-xs relative transition-colors ${
+                `flex flex-col items-center justify-center py-3 px-2 flex-1 text-xs relative transition-colors nav-button-hover ${
                   isActive
                     ? 'bg-orange-50 dark:bg-gray-700 text-orange-500 border-t-2 border-orange-500'
                     : 'text-gray-600 dark:text-gray-400 hover:text-orange-500'
@@ -185,7 +185,7 @@ export default function Layout() {
               <item.icon size={24} className="mb-1" />
               <span className="text-center">{item.name}</span>
               {item.badge !== undefined && item.badge > 0 && (
-                <span className="absolute top-1 right-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                <span className="absolute top-1 right-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[18px] text-center animate-bounce">
                   {item.badge}
                 </span>
               )}
@@ -206,17 +206,17 @@ export default function Layout() {
                 key={item.name}
                 to={item.to}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 p-3 rounded ${
+                  `flex items-center gap-3 p-3 rounded relative transition-all nav-button-hover ${
                     isActive
-                      ? 'bg-orange-500 text-white'
-                      : 'hover:bg-gray-100 dark:hover:bg-gray-700'
+                      ? 'bg-orange-500 text-white shadow-lg'
+                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
                   }`
                 }
               >
                 <item.icon size={18} />
                 {item.name}
-                {item.badge !== undefined && item.badge >= 0 && (
-                  <span className="ml-auto bg-red-500 text-white text-xs px-2 py-1 rounded-full min-w-[20px] text-center">
+                {item.badge !== undefined && item.badge > 0 && (
+                  <span className="ml-auto bg-red-500 text-white text-xs px-2 py-1 rounded-full min-w-[20px] text-center animate-bounce">
                     {item.badge}
                   </span>
                 )}

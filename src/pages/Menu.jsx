@@ -275,7 +275,7 @@ export default function Menu() {
                   <td>
                     <button
                       onClick={() => addToCart(item)}
-                      className={`px-4 py-2 rounded font-semibold text-white
+                      className={`px-4 py-2 rounded font-semibold text-white add-button-animate
                         ${
                           addedFlash[item.id]
                             ? 'bg-green-500'
