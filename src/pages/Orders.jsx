@@ -4,12 +4,15 @@ import { format } from 'date-fns'
 import { convertToTamil } from '../lib/tamilTranslations'
 import { supabase } from '../lib/supabase'
 import { triggerOrderNotification, requestNotificationPermission } from '../utils/notifications'
+import Toast from '../components/Toast'
 
 export default function Orders() {
   const [orders, setOrders] = useState([])
   const [filter, setFilter] = useState('ALL')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [showToast, setShowToast] = useState(false)
+  const [toastMessage, setToastMessage] = useState('')
 
   useEffect(() => {
     // 🔔 Request notification permission on mount
@@ -84,6 +87,9 @@ export default function Orders() {
 
   return (
     <div className="space-y-4">
+      {/* Success Toast */}
+      {showToast && <Toast message={toastMessage} onClose={() => setShowToast(false)} />}
+      
       {loading && <div className="text-gray-500">Loading orders…</div>}
       {error && (
         <div className="card bg-red-50 text-red-700 p-3">{error}</div>
@@ -175,6 +181,10 @@ export default function Orders() {
                   } else {
                     // 🔔 Trigger notification sound and badge
                     triggerOrderNotification(o.orderNumber)
+                    // Show success toast
+                    setToastMessage('Order Marked as Placed!')
+                    setShowToast(true)
+                    setTimeout(() => setShowToast(false), 3000)
                   }
                 }}
               >

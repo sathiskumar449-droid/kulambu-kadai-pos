@@ -147,103 +147,129 @@ export default function Settings() {
   }
 
   if (loading) {
-    return <div className="text-gray-500">Loading menu…</div>
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full" />
+      </div>
+    )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-gray-50 pb-4">
       {/* HEADER */}
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Menu Management</h2>
-        <button
-          onClick={() => setShowModal(true)}
-          className="btn-primary flex items-center"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Add New Item
-        </button>
+      <div className="sticky top-0 z-40 bg-white border-b border-gray-200 shadow-sm p-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl md:text-2xl font-bold">Menu Management</h2>
+          <button
+            onClick={() => setShowModal(true)}
+            className="bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white px-3 md:px-4 py-2 md:py-2.5 rounded-lg font-semibold flex items-center gap-2 text-sm md:text-base transition"
+          >
+            <Plus className="w-5 h-5" />
+            <span className="hidden sm:inline">New Item</span>
+          </button>
+        </div>
       </div>
 
+      {/* ERROR MESSAGE */}
       {error && (
-        <div className="card bg-red-50 text-red-700 p-3">{error}</div>
+        <div className="m-4 bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded">
+          {error}
+        </div>
       )}
 
-      {/* MENU LIST - TABLE VIEW */}
-      <div className="card">
-        <table className="w-full">
-          <thead>
-            <tr>
-              <th>S.No</th>
-              <th>Item Name</th>
-              <th>Price</th>
-              <th>Stock</th>
-              <th>Status</th>
-              <th className="text-center">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {menuItems.map((item, index) => (
-              <tr key={item.id}>
-                <td>{index + 1}</td>
-                <td className="font-medium">{item.name}</td>
-                <td>₹{item.price}</td>
-                <td>{item.daily_stock_quantity} {item.unit}</td>
-                <td>
-                  <span className={`px-2 py-1 rounded text-xs ${
-                    item.is_enabled 
-                      ? 'bg-green-100 text-green-700' 
-                      : 'bg-gray-100 text-gray-600'
-                  }`}>
-                    {item.is_enabled ? 'Active' : 'Inactive'}
-                  </span>
-                </td>
-                <td>
-                  <div className="flex gap-2 justify-center">
+      {/* MENU LIST - Card View for Mobile */}
+      <div className="p-4 space-y-3">
+        {menuItems.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            No items found
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            {menuItems.map((item) => (
+              <div key={item.id} className="bg-white border-2 border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition">
+                {/* Item Header */}
+                <div className="bg-gradient-to-r from-orange-50 to-orange-100 p-3 border-b border-gray-200">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1">
+                      <h3 className="font-bold text-base md:text-lg text-gray-800 line-clamp-2">
+                        {item.name}
+                      </h3>
+                      <div className="mt-1 flex items-center gap-2">
+                        <span className="text-lg md:text-xl font-bold text-orange-600">
+                          ₹{item.price}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                          item.is_enabled 
+                            ? 'bg-green-100 text-green-700' 
+                            : 'bg-gray-200 text-gray-600'
+                        }`}>
+                          {item.is_enabled ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="text-sm text-gray-500 text-right">
+                      #{item.id}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Item Details */}
+                <div className="p-3 space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">Stock:</span>
+                    <span className="font-semibold">{item.daily_stock_quantity} {item.unit}</span>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex gap-2 pt-2">
                     <button
                       onClick={() => handleEdit(item)}
-                      className="p-2 bg-blue-100 text-blue-600 rounded hover:bg-blue-200"
-                      title="Edit"
+                      className="flex-1 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white py-2 rounded-lg font-semibold text-sm transition flex items-center justify-center gap-1"
                     >
                       <Edit2 className="w-4 h-4" />
+                      <span className="hidden sm:inline">Edit</span>
                     </button>
                     <button
                       onClick={() => handleDelete(item.id)}
-                      className="p-2 bg-red-100 text-red-600 rounded hover:bg-red-200"
-                      title="Delete"
+                      className="flex-1 bg-red-500 hover:bg-red-600 active:bg-red-700 text-white py-2 rounded-lg font-semibold text-sm transition flex items-center justify-center gap-1"
                     >
                       <Trash2 className="w-4 h-4" />
+                      <span className="hidden sm:inline">Delete</span>
                     </button>
                   </div>
-                </td>
-              </tr>
+                </div>
+              </div>
             ))}
-          </tbody>
-        </table>
+          </div>
+        )}
       </div>
 
-      {/* MODAL */}
+      {/* MODAL - Mobile Optimized */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-          <div className="bg-white w-full max-w-lg rounded-xl p-6 relative">
+        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end md:items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white rounded-t-2xl md:rounded-2xl w-full md:max-w-md max-h-[90vh] overflow-y-auto shadow-2xl">
+            {/* Modal Header */}
+            <div className="sticky top-0 flex items-center justify-between p-4 border-b border-gray-200 bg-white rounded-t-2xl">
+              <h3 className="text-lg md:text-xl font-bold">
+                {editingId ? 'Edit Item' : 'Add New Item'}
+              </h3>
+              <button
+                onClick={resetForm}
+                className="text-gray-500 hover:text-gray-700 p-1"
+              >
+                <X size={24} />
+              </button>
+            </div>
 
-            <button
-              onClick={resetForm}
-              className="absolute top-3 right-3 text-gray-500"
-            >
-              <X />
-            </button>
-
-            <h3 className="text-lg font-semibold mb-4">
-              {editingId ? 'Edit Menu Item' : 'Add Menu Item'}
-            </h3>
-
+            {/* Modal Body */}
             <form
               onSubmit={editingId ? handleUpdate : handleAdd}
-              className="space-y-4"
+              className="p-4 space-y-4"
             >
+              {/* Name Input */}
               <div>
-                <label className="block text-sm mb-1">
-                  Menu Name (English or Tamil)
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Item Name
                 </label>
                 <input
                   type="text"
@@ -251,62 +277,77 @@ export default function Settings() {
                   value={formData.name}
                   onChange={handleInputChange}
                   required
-                  className="input-field"
+                  className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none text-base transition"
                   placeholder="sambar / சாம்பார்"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* Price & Stock Row */}
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm mb-1">Price</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Price (₹)
+                  </label>
                   <input
                     type="number"
                     name="price"
                     value={formData.price}
                     onChange={handleInputChange}
                     required
-                    className="input-field"
+                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none text-base transition"
+                    placeholder="50"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm mb-1">Stock QTY</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">
+                    Stock Quantity
+                  </label>
                   <input
                     type="number"
                     name="stock_qty"
                     value={formData.stock_qty}
                     onChange={handleInputChange}
                     required
-                    className="input-field"
+                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none text-base transition"
+                    placeholder="20"
                   />
                 </div>
               </div>
 
-              <div className="flex items-center">
+              {/* Status Checkbox */}
+              <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-lg">
                 <input
                   type="checkbox"
+                  id="is_enabled"
                   name="is_enabled"
                   checked={formData.is_enabled}
                   onChange={handleInputChange}
+                  className="w-5 h-5 cursor-pointer"
                 />
-                <span className="ml-2 text-sm">Available Item</span>
+                <label htmlFor="is_enabled" className="text-sm font-semibold text-gray-700 cursor-pointer">
+                  This item is available
+                </label>
               </div>
 
-              <div className="flex gap-2 pt-4">
-                <button type="submit" className="btn-primary flex items-center">
-                  <Save className="w-5 h-5 mr-2" />
+              {/* Action Buttons */}
+              <div className="flex gap-3 pt-4 border-t border-gray-200">
+                <button
+                  type="submit"
+                  className="flex-1 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white py-3 rounded-lg font-bold text-base transition flex items-center justify-center gap-2"
+                >
+                  <Save className="w-5 h-5" />
                   {editingId ? 'Update' : 'Add'}
                 </button>
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="btn-secondary"
+                  className="flex-1 bg-gray-300 hover:bg-gray-400 active:bg-gray-500 text-gray-700 py-3 rounded-lg font-bold text-base transition"
                 >
                   Cancel
                 </button>
               </div>
             </form>
-
           </div>
         </div>
       )}

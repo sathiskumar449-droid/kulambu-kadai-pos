@@ -23,6 +23,7 @@ export default function Layout() {
 
   const [orderCount, setOrderCount] = useState(0)
   const [isDarkMode, setIsDarkMode] = useState(false)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   /* ---------------- ORDERS BADGE ---------------- */
   useEffect(() => {
@@ -158,46 +159,59 @@ export default function Layout() {
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900 flex-col md:flex-row">
 
       {/* MOBILE HEADER - TOP */}
-      <div className="fixed top-0 left-0 right-0 z-40 md:hidden bg-white dark:bg-gray-800 shadow">
+      <div className="fixed top-0 left-0 right-0 z-40 md:hidden bg-white dark:bg-gray-800 shadow-md">
         <div className="flex justify-between items-center px-4 py-3">
-          <h1 className="font-bold text-orange-500">Kulambu Kadai</h1>
-          <button onClick={() => setIsDarkMode(!isDarkMode)}>
-            {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
-          </button>
+          <h1 className="font-bold text-lg text-orange-600">🍲 Kulumbu Kadai</h1>
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+            >
+              {isDarkMode ? <Sun size={20} className="text-yellow-500" /> : <Moon size={20} className="text-gray-600" />}
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* MOBILE BOTTOM NAVIGATION */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white dark:bg-gray-800 shadow-2xl border-t border-gray-200 dark:border-gray-700">
+      {/* MOBILE BOTTOM NAVIGATION - Enhanced */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white dark:bg-gray-800 shadow-2xl border-t-2 border-orange-500 dark:border-orange-600">
         <nav className="flex justify-around items-center">
           {navigation.map(item => (
             <NavLink
               key={item.name}
               to={item.to}
+              onClick={() => setMobileMenuOpen(false)}
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center py-3 px-2 flex-1 text-xs relative transition-colors nav-button-hover ${
+                `flex flex-col items-center justify-center py-3 px-2 flex-1 text-xs md:text-sm relative transition-all nav-button-hover ${
                   isActive
-                    ? 'bg-orange-50 dark:bg-gray-700 text-orange-500 border-t-2 border-orange-500'
-                    : 'text-gray-600 dark:text-gray-400 hover:text-orange-500'
+                    ? 'bg-orange-50 dark:bg-gray-700 text-orange-600 border-t-4 border-orange-500 font-bold'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-orange-500 active:bg-gray-100'
                 }`
               }
             >
-              <item.icon size={24} className="mb-1" />
-              <span className="text-center">{item.name}</span>
+              <item.icon size={22} className="mb-0.5" />
+              <span className="text-center line-clamp-1 text-xs">{item.name}</span>
               {item.badge !== undefined && item.badge > 0 && (
-                <span className="absolute top-1 right-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[18px] text-center animate-bounce">
-                  {item.badge}
-                </span>
+                <motion.span 
+                  className="absolute -top-1 -right-1 bg-red-600 text-white text-xs px-1.5 py-0.5 rounded-full min-w-[20px] text-center font-bold shadow-lg"
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{ duration: 0.5, repeat: Infinity }}
+                >
+                  {item.badge > 99 ? '99+' : item.badge}
+                </motion.span>
               )}
             </NavLink>
           ))}
         </nav>
       </div>
 
-      {/* DESKTOP SIDEBAR */}
-      <div className="hidden md:flex md:flex-col w-64 bg-white dark:bg-gray-800 shadow">
-        <div className="p-4 font-bold text-white bg-orange-500">
-          Kulambu Kadai
+      {/* DESKTOP SIDEBAR - Enhanced */}
+      <div className="hidden md:flex md:flex-col w-72 bg-gradient-to-b from-white to-gray-50 dark:from-gray-800 dark:to-gray-900 shadow-lg border-r border-gray-200 dark:border-gray-700">
+        <div className="p-5 font-bold text-white bg-gradient-to-r from-orange-500 to-orange-600 rounded-br-2xl shadow-md">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl">🍲</span>
+            <span className="text-xl">Kulumbu Kadai</span>
+          </div>
         </div>
         <nav className="p-4 space-y-2 flex flex-col flex-1">
           <div className="flex-1 space-y-2">
@@ -206,19 +220,23 @@ export default function Layout() {
                 key={item.name}
                 to={item.to}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 p-3 rounded relative transition-all nav-button-hover ${
+                  `flex items-center gap-3 px-4 py-3 rounded-lg relative transition-all nav-button-hover font-medium ${
                     isActive
-                      ? 'bg-orange-500 text-white shadow-lg'
-                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'
+                      ? 'bg-orange-500 text-white shadow-lg scale-105'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-orange-100 dark:hover:bg-gray-700 active:scale-95'
                   }`
                 }
               >
-                <item.icon size={18} />
-                {item.name}
+                <item.icon size={20} />
+                <span className="flex-1">{item.name}</span>
                 {item.badge !== undefined && item.badge > 0 && (
-                  <span className="ml-auto bg-red-500 text-white text-xs px-2 py-1 rounded-full min-w-[20px] text-center animate-bounce">
-                    {item.badge}
-                  </span>
+                  <motion.span 
+                    className="bg-red-600 text-white text-xs px-2.5 py-1 rounded-full min-w-[28px] text-center font-bold shadow"
+                    animate={{ scale: [1, 1.1, 1] }}
+                    transition={{ duration: 0.6, repeat: Infinity }}
+                  >
+                    {item.badge > 99 ? '99+' : item.badge}
+                  </motion.span>
                 )}
               </NavLink>
             ))}
@@ -226,28 +244,30 @@ export default function Layout() {
           {/* LOGOUT BUTTON */}
           <button
             onClick={handleLogout}
-            className="flex items-center gap-3 p-3 rounded bg-red-500 text-white hover:bg-red-600 mt-auto"
+            className="flex items-center gap-3 px-4 py-3 rounded-lg bg-red-500 text-white hover:bg-red-600 active:scale-95 transition font-medium shadow-md"
           >
-            <LogOut size={18} />
+            <LogOut size={20} />
             Logout
           </button>
         </nav>
       </div>
 
       {/* MAIN CONTENT */}
-      <div className="flex-1 overflow-auto pt-16 md:pt-0 pb-20 md:pb-0">
+      <div className="flex-1 overflow-auto pt-16 md:pt-0 pb-20 md:pb-0 bg-gray-50 dark:bg-gray-900">
         <Outlet />
       </div>
 
-      {/* MOBILE LOGOUT (bottom right corner for mobile) */}
+      {/* MOBILE LOGOUT (floating button for mobile) */}
       <div className="fixed bottom-20 right-4 md:hidden">
-        <button
+        <motion.button
           onClick={handleLogout}
-          className="flex items-center justify-center gap-2 p-3 rounded-full bg-red-500 text-white hover:bg-red-600 shadow-lg"
+          className="flex items-center justify-center p-4 rounded-full bg-red-500 text-white hover:bg-red-600 active:scale-95 shadow-lg font-bold transition"
           title="Logout"
+          whileHover={{ scale: 1.1 }}
+          whileTap={{ scale: 0.95 }}
         >
-          <LogOut size={20} />
-        </button>
+          <LogOut size={24} />
+        </motion.button>
       </div>
     </div>
   )
