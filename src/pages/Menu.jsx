@@ -12,7 +12,7 @@ import {
   X
 } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { convertToTamil, searchWithTanglish } from '../lib/tamilTranslations'
+import { convertToTamil, convertToEnglish, searchWithTanglish } from '../lib/tamilTranslations'
 import { triggerOrderNotification, requestNotificationPermission } from '../utils/notifications'
 import Toast from '../components/Toast'
 
@@ -164,7 +164,7 @@ export default function Menu() {
       const itemsPayload = cart.map(i => ({
         order_id: finalOrder.id,
         menu_item_id: i.id,
-        item_name: i.name, // Tamil already stored
+        item_name: i.name, // Tamil name stored
         quantity: i.quantity,
         price: i.price,
         subtotal: i.price * i.quantity
@@ -223,7 +223,7 @@ export default function Menu() {
           {/* Search Bar */}
           <input
             className="w-full px-4 py-2.5 md:py-3 text-base rounded-lg border border-gray-300 focus:border-orange-500 focus:outline-none transition"
-            placeholder="Search items (sambar, rasam, etc)…"
+            placeholder="Search items (sambar, rasam, kesari, etc)…"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
           />
@@ -249,84 +249,91 @@ export default function Menu() {
         </div>
       </div>
 
-      {/* MENU ITEMS - Card Grid for Mobile */}
-      <div className="p-3 md:p-4 space-y-3">
+      {/* MENU ITEMS - List View */}
+      <div className="p-3 md:p-4 space-y-2">
         {filteredItems.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             No items found
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+          <div className="space-y-2">
             {filteredItems.map((item) => {
               const qty = rowQuantities[item.id] || 1
               const isAdded = addedFlash[item.id]
+              const tamilName = convertToTamil(item.name)
+              // Check if item name is already in Tamil or English
+              const isTamilName = /[\u0B80-\u0BFF]/.test(item.name)
+              const englishName = isTamilName ? convertToEnglish(item.name) : item.name
 
               return (
                 <div
                   key={item.id}
-                  className={`bg-white rounded-lg border-2 p-3 md:p-4 transition ${
+                  className={`bg-white rounded-lg border-2 p-3 transition ${
                     isAdded ? 'border-green-500 shadow-lg' : 'border-gray-200 shadow-sm'
                   }`}
                 >
-                  {/* Item Header */}
-                  <div className="mb-3">
-                    <h3 className="font-bold text-base md:text-lg text-gray-800 line-clamp-2">
-                      {convertToTamil(item.name)}
-                    </h3>
-                    <p className="text-lg md:text-xl font-bold text-orange-600 mt-1">
-                      ₹{item.price}
-                    </p>
-                  </div>
+                  <div className="flex items-center gap-3">
+                    {/* Item Details */}
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-base md:text-lg text-gray-800">
+                        {tamilName}
+                      </h3>
+                      <p className="text-sm text-gray-500 capitalize">
+                        {englishName}
+                      </p>
+                      <p className="text-lg md:text-xl font-bold text-orange-600 mt-1">
+                        ₹{item.price}
+                      </p>
+                    </div>
 
-                  {/* Quantity Control */}
-                  <div className="flex items-center justify-between gap-2 mb-3">
-                    <span className="text-gray-600 text-sm">Qty:</span>
-                    <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+                    {/* Quantity Control */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+                        <button
+                          onClick={() =>
+                            setRowQuantities(q => ({
+                              ...q,
+                              [item.id]: Math.max(1, q[item.id] - 1)
+                            }))
+                          }
+                          className="w-8 h-8 flex items-center justify-center rounded font-bold text-gray-700 active:bg-gray-200 transition"
+                        >
+                          −
+                        </button>
+
+                        <span className="w-8 text-center font-semibold text-base">
+                          {qty}
+                        </span>
+
+                        <button
+                          onClick={() =>
+                            setRowQuantities(q => ({
+                              ...q,
+                              [item.id]: q[item.id] + 1
+                            }))
+                          }
+                          className="w-8 h-8 flex items-center justify-center rounded font-bold text-gray-700 active:bg-gray-200 transition"
+                        >
+                          +
+                        </button>
+                      </div>
+
+                      {/* Price with Quantity */}
+                      <div className="text-center w-16">
+                        <span className="font-bold text-gray-800 text-sm">₹{item.price * qty}</span>
+                      </div>
+
+                      {/* Add Button */}
                       <button
-                        onClick={() =>
-                          setRowQuantities(q => ({
-                            ...q,
-                            [item.id]: Math.max(1, q[item.id] - 1)
-                          }))
-                        }
-                        className="w-8 h-8 flex items-center justify-center rounded font-bold text-gray-700 active:bg-gray-200 transition"
+                        onClick={() => addToCart(item)}
+                        className={`px-4 py-2 rounded-lg font-bold text-sm text-white transition add-button-animate ${
+                          isAdded ? 'bg-green-500' : 'bg-orange-500 active:bg-orange-600'
+                        }`}
                       >
-                        −
-                      </button>
-
-                      <span className="w-8 text-center font-semibold text-base">
-                        {qty}
-                      </span>
-
-                      <button
-                        onClick={() =>
-                          setRowQuantities(q => ({
-                            ...q,
-                            [item.id]: q[item.id] + 1
-                          }))
-                        }
-                        className="w-8 h-8 flex items-center justify-center rounded font-bold text-gray-700 active:bg-gray-200 transition"
-                      >
-                        +
+                        {isAdded ? '✓' : '➕'}
                       </button>
                     </div>
                   </div>
-
-                  {/* Price with Quantity */}
-                  <div className="text-center mb-3 text-gray-600 text-sm">
-                    {qty > 1 && `₹${item.price} × ${qty} = `}
-                    <span className="font-bold text-gray-800">₹{item.price * qty}</span>
-                  </div>
-
-                  {/* Add Button */}
-                  <button
-                    onClick={() => addToCart(item)}
-                    className={`w-full py-2.5 md:py-3 rounded-lg font-bold text-base md:text-lg text-white transition add-button-animate ${
-                      isAdded ? 'bg-green-500' : 'bg-orange-500 active:bg-orange-600'
-                    }`}
-                  >
-                    {isAdded ? '✓ Added' : '➕ Add'}
-                  </button>
                 </div>
               )
             })}

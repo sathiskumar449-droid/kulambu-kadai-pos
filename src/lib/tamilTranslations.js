@@ -7,15 +7,33 @@ const ENGLISH_TO_TAMIL = {
   'rasam': 'ரசம்',
   'vaghali': 'வாகளி',
   'puli kulambu': 'புளி குழம்பு',
+  'mor kulambu': 'மோர் குழம்பு',
   'kosambi': 'கொசம்பி',
   'avial': 'அவியல்',
   'koottu': 'கூட்டு',
+  'poriyal': 'பொரியல்',
   'curry': 'குழம்பு',
   'gravy': 'கிரேவி',
   'chicken curry': 'சிக்கன் குழம்பு',
-  'chicken gravy': 'சிக்கன் கிரேவி',
+  'chicken gravy': 'சிக்கன் கீரேவி',
   'fish curry': 'மீன் குழம்பு',
   'vegetable curry': 'காய்கறி குழம்பு',
+  
+  // Extra curries
+  'extra kulambu': 'எக்ஸ்ட்ரா குழம்பு',
+  'extra rasam': 'எக்ஸ்ட்ரா ரசம்',
+  'extra avial': 'எக்ஸ்ட்ரா அவியல்',
+  'extra koottu': 'எக்ஸ்ட்ரா கூட்டு',
+  
+  // Side dishes
+  'kadaisal': 'கடைசல்',
+  'thuvayal': 'துவயல்',
+  'inji puli': 'இஞ்சி புளி',
+  'ginger puli': 'இஞ்சி புளி',
+  'cauliflower chilli': 'காலிப்பளவர் சில்லி',
+  'mushroom chilli': 'காளான் சில்லி',
+  'mushroom gravy': 'காளான் கீரேவி',
+  'paneer butter masala': 'பன்னீர் பட்டர் மசாலா',
 
   // Rice dishes
   'curd rice': 'தயிர் சாதம்',
@@ -24,10 +42,14 @@ const ENGLISH_TO_TAMIL = {
   'coconut rice': 'தேங்காய் சாதம்',
   'ghee rice': 'நெய் சாதம்',
   'biryani': 'பிரியாணி',
+  'chicken biryani': 'சிக்கன் பிரியாணி',
+  'mushroom biryani': 'காளான் பிரியாணி',
   'fried rice': 'வறுத்த சாதம்',
   'rice': 'சாதம்',
   'pulao': 'புலாவ்',
   'tamarind rice': 'புளிப் சாதம்',
+  'alavu saappadu': 'அளவு சாப்பாடு',
+  'meals': 'சாப்பாடு',
 
   // Breads
   'chappati': 'சப்பாத்தி',
@@ -38,18 +60,84 @@ const ENGLISH_TO_TAMIL = {
   'naan': 'நான்',
   'dosa': 'டோசை',
   'idli': 'இட்லி',
-  'uttapam': 'உத்தப்பम்',
-
+  'idiyappam': 'இடியாப்பம்',
+  'pongal': 'பொங்கல்',
+  'santhakai': 'சந்தகை',
+  'kozhukattai': 'கொழுக்கட்டை',
+  'paniyaram': 'பணியாரம்',
+  'uttapam': 'உத்தப்பம்',
+  // Breakfast items
+  'tiffin sambar': 'டிபன் சாம்பார்',
+  'veg kuruma': 'வெஜ் குருமா',
+  'chenna masala': 'சென்னா மசாலா',
+  'tomato thokku': 'தக்காளி தொக்கு',
+  'chutney 20': 'சட்னி 20',
+  'chutney 25': 'சட்னி 25',
+  // Sweet dishes
+  'kesari': 'கேசரி',
+  'payasam': 'பாயாசம்',
+  'badusha': 'பாதுஷா',
   // Proteins
   'chicken': 'சிக்கன்',
   'fish': 'மீன்',
-  'mutton': 'ஆட்டு இறைச்சி',
+  'mutton': 'மாட்டு இறைச்சி',
   'beef': 'மாட்டு இறைச்சி',
   'prawn': 'இறால்',
   'shrimp': 'இறால்',
   'egg': 'முட்டை',
   'tofu': 'டோஃபு',
   'paneer': 'பனீர்',
+  
+  // Non-veg items
+  'egg curry': 'முட்டை குழம்பு',
+  'egg gravy': 'முட்டை கீரேவி',
+  'chicken curry': 'சிக்கன் குழம்பு',
+  'chicken gravy': 'சிக்கன் கீரேவி',
+
+  'nattu kozhi kulambu': 'நாட்டுக்கோழி குழம்பு',
+  'nattu kozhi gravy': 'நாட்டுக்கோழி கீரேவி',
+  'nattu kozhi soup': 'நாட்டுக்கோழி கூப்',
+  'mutton curry': 'மட்டன் குழம்பு',
+  'mutton gravy': 'மட்டன் கீரேவி',
+  'kudal gravy': 'குடல் கீரேவி',
+  'kudal fry': 'குடல் பிரை',
+  
+  // Fish items
+  'mathi fish curry': 'மத்தி மீன் குழம்பு',
+  'katla fish curry': 'கட்லா மீன் குழம்பு',
+  'parai fish curry': 'பாரை மீன் குழம்பு',
+  'mandai fish curry': 'மண்டை மீன் குழம்பு',
+  'karuvaatu kulambu': 'கருவாட்டு குழம்பு',
+  'karuvaatu thokku': 'கருவாட்டு தொக்கு',
+  'mathi fry': 'மத்தி பிரை',
+  'parai fry': 'பாரை பிரை',
+  'fish chilli': 'மீன் சில்லி',
+  
+  // Crab
+  'crab curry': 'நண்டு குழம்பு',
+  'crab gravy': 'நண்டு கிரேவி',
+  'nandu curry': 'நண்டு குழம்பு',
+  'nandu gravy': 'நண்டு கிரேவி',
+  
+  // Special chicken
+  'chicken chettinad gravy': 'சிக்கன் செட்டிநாடு கிரேவி',
+  'chicken chettinad fry': 'சிக்கன் செட்டிநாடு பிரை',
+  'pepper chicken fry': 'பெப்பர் சிக்கன் பிரை',
+  'pepper chicken gravy': 'பெப்பர் சிக்கன் கிரேவி',
+  'boneless chilli': 'போன்லெஸ் சில்லி',
+  'bone chilli chicken': 'போன் சில்லி சிக்கன்',
+  
+  // Duck
+  'duck fry': 'வாத்து பிரை',
+  'duck gravy': 'வாத்து கிரேவி',
+  'vaathu fry': 'வாத்து பிரை',
+  'vaathu gravy': 'வாத்து கிரேவி',
+  
+  // Combo meals
+  'non-veg mini combo': 'அசைவ மினி காம்போ',
+  'fish mini combo': 'மீன் மினி காம்போ',
+  'asaiva mini combo': 'அசைவ மினி காம்போ',
+  'meen mini combo': 'மீன் மினி காம்போ',
 
   // Vegetables
   'potato': 'உருளைக்கிழங்கு',
@@ -88,7 +176,6 @@ const ENGLISH_TO_TAMIL = {
   'water': 'நீர்',
 
   // Desserts
-  'payasam': 'பாயசம்',
   'kheer': 'பாயசம்',
   'halwa': 'ஹலுவா',
   'jaggery': 'வெல்லப்பாகு',
@@ -205,8 +292,40 @@ export function searchWithTanglish(searchQuery, itemName) {
   return false;
 }
 
+/**
+ * Converts Tamil food name to English
+ * If already English, returns as-is
+ * @param {string} text - Tamil or English text
+ * @returns {string} - English text
+ */
+export function convertToEnglish(text) {
+  if (!text) return '';
+
+  const trimmedText = text.trim();
+
+  // Check if it's already English (no Tamil Unicode characters)
+  if (!/[\u0B80-\u0BFF]/.test(text)) {
+    return text; // Already English, return as-is
+  }
+
+  // Create reverse lookup (Tamil to English)
+  const TAMIL_TO_ENGLISH = Object.entries(ENGLISH_TO_TAMIL).reduce((acc, [english, tamil]) => {
+    acc[tamil] = english;
+    return acc;
+  }, {});
+
+  // Check for exact match
+  if (TAMIL_TO_ENGLISH[trimmedText]) {
+    return TAMIL_TO_ENGLISH[trimmedText];
+  }
+
+  // If no match found, return original text
+  return text;
+}
+
 export default {
   convertToTamil,
+  convertToEnglish,
   isTamil,
   searchWithTanglish,
   ENGLISH_TO_TAMIL,

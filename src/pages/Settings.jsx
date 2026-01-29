@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Plus, Edit2, Trash2, Save, X } from 'lucide-react'
-import { convertToTamil } from '../lib/tamilTranslations'
+import { convertToTamil, convertToEnglish } from '../lib/tamilTranslations'
 import { supabase } from '../lib/supabase'
 
 export default function Settings() {
@@ -177,27 +177,28 @@ export default function Settings() {
         </div>
       )}
 
-      {/* MENU LIST - Card View for Mobile */}
-      <div className="p-4 space-y-3">
+      {/* MENU LIST - List View */}
+      <div className="p-4 space-y-2">
         {menuItems.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             No items found
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {menuItems.map((item) => (
-              <div key={item.id} className="bg-white border-2 border-gray-200 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition">
-                {/* Item Header */}
-                <div className="bg-gradient-to-r from-orange-50 to-orange-100 p-3 border-b border-gray-200">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1">
-                      <h3 className="font-bold text-base md:text-lg text-gray-800 line-clamp-2">
-                        {item.name}
-                      </h3>
-                      <div className="mt-1 flex items-center gap-2">
-                        <span className="text-lg md:text-xl font-bold text-orange-600">
-                          ₹{item.price}
-                        </span>
+          <div className="space-y-2">
+            {menuItems.map((item) => {
+              const tamilName = convertToTamil(item.name)
+              const isTamilName = /[\u0B80-\u0BFF]/.test(item.name)
+              const englishName = isTamilName ? convertToEnglish(item.name) : item.name
+              
+              return (
+                <div key={item.id} className="bg-white border-2 border-gray-200 rounded-lg shadow-sm hover:shadow-md transition p-3">
+                  <div className="flex items-center gap-3">
+                    {/* Item Details */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <h3 className="font-bold text-base md:text-lg text-gray-800">
+                          {tamilName}
+                        </h3>
                         <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
                           item.is_enabled 
                             ? 'bg-green-100 text-green-700' 
@@ -206,40 +207,41 @@ export default function Settings() {
                           {item.is_enabled ? 'Active' : 'Inactive'}
                         </span>
                       </div>
+                      <p className="text-sm text-gray-500 mb-1">
+                        {englishName}
+                      </p>
+                      <div className="flex items-center gap-3 text-sm">
+                        <span className="text-lg font-bold text-orange-600">
+                          ₹{item.price}
+                        </span>
+                        <span className="text-gray-600">
+                          Stock: <span className="font-semibold">{item.daily_stock_quantity} {item.unit}</span>
+                        </span>
+                        <span className="text-gray-400 text-xs">#{item.id}</span>
+                      </div>
                     </div>
-                    <div className="text-sm text-gray-500 text-right">
-                      #{item.id}
+
+                    {/* Action Buttons */}
+                    <div className="flex gap-2 flex-shrink-0">
+                      <button
+                        onClick={() => handleEdit(item)}
+                        className="bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white px-3 py-2 rounded-lg font-semibold text-sm transition flex items-center gap-1"
+                      >
+                        <Edit2 className="w-4 h-4" />
+                        <span className="hidden md:inline">Edit</span>
+                      </button>
+                      <button
+                        onClick={() => handleDelete(item.id)}
+                        className="bg-red-500 hover:bg-red-600 active:bg-red-700 text-white px-3 py-2 rounded-lg font-semibold text-sm transition flex items-center gap-1"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        <span className="hidden md:inline">Delete</span>
+                      </button>
                     </div>
                   </div>
                 </div>
-
-                {/* Item Details */}
-                <div className="p-3 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Stock:</span>
-                    <span className="font-semibold">{item.daily_stock_quantity} {item.unit}</span>
-                  </div>
-
-                  {/* Action Buttons */}
-                  <div className="flex gap-2 pt-2">
-                    <button
-                      onClick={() => handleEdit(item)}
-                      className="flex-1 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white py-2 rounded-lg font-semibold text-sm transition flex items-center justify-center gap-1"
-                    >
-                      <Edit2 className="w-4 h-4" />
-                      <span className="hidden sm:inline">Edit</span>
-                    </button>
-                    <button
-                      onClick={() => handleDelete(item.id)}
-                      className="flex-1 bg-red-500 hover:bg-red-600 active:bg-red-700 text-white py-2 rounded-lg font-semibold text-sm transition flex items-center justify-center gap-1"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                      <span className="hidden sm:inline">Delete</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>
