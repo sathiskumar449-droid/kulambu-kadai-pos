@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { CheckCircle, Clock, Trash2 } from 'lucide-react'
+import { CheckCircle } from 'lucide-react'
 import { format } from 'date-fns'
 import { convertToTamil } from '../lib/tamilTranslations'
 import { supabase } from '../lib/supabase'
@@ -192,26 +192,6 @@ export default function Orders() {
                 <CheckCircle /> Mark Placed
               </button>
             )}
-            <button
-              className="btn-secondary"
-              onClick={async () => {
-                // Optimistically update local state
-                setOrders(prevOrders => prevOrders.filter(order => order.id !== o.id))
-
-                const { error: deleteError } = await supabase
-                  .from('orders')
-                  .delete()
-                  .eq('id', o.id)
-                if (deleteError) {
-                  console.error('Delete failed:', deleteError)
-                  setError('Could not delete order.')
-                  // Revert optimistic update on error
-                  fetchOrders()
-                }
-              }}
-            >
-              <Trash2 /> Delete
-            </button>
           </div>
         </div>
       ))}
