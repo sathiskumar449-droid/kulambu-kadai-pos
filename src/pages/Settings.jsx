@@ -33,7 +33,7 @@ export default function Settings() {
       const { data, error: fetchError } = await supabase
         .from('menu_items')
         .select('id, name, price, daily_stock_quantity, unit, is_enabled')
-        .order('created_at')
+        .order('created_at', { ascending: false })
 
       if (fetchError) throw fetchError
       setMenuItems(data || [])
