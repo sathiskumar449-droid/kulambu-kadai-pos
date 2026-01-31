@@ -79,6 +79,15 @@ export default function Stock() {
     )
   }
 
+  const totalPrepared = menuItems.reduce(
+    (sum, item) => sum + Number(item.prepared_quantity ?? item.daily_stock_quantity ?? 0),
+    0
+  )
+  const totalRemaining = menuItems.reduce(
+    (sum, item) => sum + Number(item.remaining_quantity ?? 0),
+    0
+  )
+
   return (
     <div className="space-y-6">
       {error && (
@@ -86,7 +95,7 @@ export default function Stock() {
       )}
 
       {/* Stock Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
         <div className="card bg-blue-50">
           <h4 className="text-sm font-medium text-blue-900 mb-2">Total Items</h4>
           <p className="text-3xl font-bold text-blue-600">{menuItems.length}</p>
@@ -96,6 +105,14 @@ export default function Stock() {
           <p className="text-3xl font-bold text-green-600">
             {menuItems.filter(item => (item.remaining_quantity ?? 0) > 0).length}
           </p>
+        </div>
+        <div className="card bg-emerald-50">
+          <h4 className="text-sm font-medium text-emerald-900 mb-2">Total Prepared</h4>
+          <p className="text-3xl font-bold text-emerald-600">{totalPrepared}</p>
+        </div>
+        <div className="card bg-teal-50">
+          <h4 className="text-sm font-medium text-teal-900 mb-2">Total Remaining</h4>
+          <p className="text-3xl font-bold text-teal-600">{totalRemaining}</p>
         </div>
         <div className="card bg-red-50">
           <h4 className="text-sm font-medium text-red-900 mb-2">Out of Stock</h4>
@@ -143,7 +160,7 @@ export default function Stock() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center space-x-2">
-                      <span className="text-sm font-semibold text-gray-900">{remaining}</span>
+                      <span className="text-sm font-semibold text-gray-900">{prepared}</span>
                       <span className="text-sm text-gray-500">{item.unit || 'Qty'}</span>
                     </div>
                   </td>

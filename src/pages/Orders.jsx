@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react'
-import { CheckCircle } from 'lucide-react'
+import { CheckCircle, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { convertToTamil } from '../lib/tamilTranslations'
 import { supabase } from '../lib/supabase'
 import { triggerOrderNotification, requestNotificationPermission } from '../utils/notifications'
 import Toast from '../components/Toast'
+import { useUserRole } from '../lib/useUserRole'
 
 export default function Orders() {
   const [orders, setOrders] = useState([])
@@ -13,6 +14,7 @@ export default function Orders() {
   const [error, setError] = useState(null)
   const [showToast, setShowToast] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
+  const { role } = useUserRole()
 
   useEffect(() => {
     // 🔔 Request notification permission on mount
@@ -190,6 +192,35 @@ export default function Orders() {
                 }}
               >
                 <CheckCircle /> Mark Placed
+              </button>
+            )}
+            {role === 'admin' && (
+              <button
+                className="btn-secondary"
+                onClick={async () => {
+                  const confirmDelete = window.confirm(`Delete order ${o.orderNumber}?`)
+                  if (!confirmDelete) return
+
+                  // Optimistically remove from UI
+                  setOrders(prev => prev.filter(order => order.id !== o.id))
+
+                  const { error: deleteError } = await supabase
+                    .from('orders')
+                    .delete()
+                    .eq('id', o.id)
+
+                  if (deleteError) {
+                    console.error('Delete failed:', deleteError)
+                    setError('Could not delete order.')
+                    fetchOrders()
+                  } else {
+                    setToastMessage('Order deleted')
+                    setShowToast(true)
+                    setTimeout(() => setShowToast(false), 3000)
+                  }
+                }}
+              >
+                <Trash2 /> Delete
               </button>
             )}
           </div>

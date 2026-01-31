@@ -8,6 +8,8 @@ export default function Dashboard() {
   const [stats, setStats] = useState({
     todaySales: 0,
     todayOrders: 0,
+    todayStockUpdates: 0,
+    todayStockValue: 0,
     bestSelling: [],
     lowStock: []
   })
@@ -23,6 +25,7 @@ export default function Dashboard() {
       .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, fetchDashboard)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_sales_summary' }, fetchDashboard)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, fetchDashboard)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_logs' }, fetchDashboard)
       .subscribe()
 
     return () => supabase.removeChannel(channel)
@@ -64,10 +67,16 @@ export default function Dashboard() {
 
       const { data: stockRows, error: stockError } = await supabase
         .from('stock_logs')
-        .select('menu_item_id, remaining_quantity, prepared_quantity, menu_items(name, unit, daily_stock_quantity)')
+        .select('menu_item_id, remaining_quantity, prepared_quantity, menu_items(name, unit, daily_stock_quantity, price)')
         .eq('date', todayStr)
 
       if (stockError) throw stockError
+
+      const { data: menuItems, error: menuError } = await supabase
+        .from('menu_items')
+        .select('id, name, daily_stock_quantity, price')
+
+      if (menuError) throw menuError
 
       const bestSellingMap = {}
       ;(itemsToday || []).forEach(row => {
@@ -91,6 +100,18 @@ export default function Dashboard() {
 
       const todaySales = todaySummary?.total_revenue || 0
       const todayOrders = todaySummary?.total_orders || 0
+      const stockMap = (stockRows || []).reduce((acc, row) => {
+        acc[row.menu_item_id] = row
+        return acc
+      }, {})
+
+      const todayStockUpdates = (stockRows || []).length
+      const todayStockValue = (menuItems || []).reduce((sum, item) => {
+        const log = stockMap[item.id]
+        const prepared = log?.prepared_quantity ?? item.daily_stock_quantity ?? 0
+        const price = item.price ?? log?.menu_items?.price ?? 0
+        return sum + Number(prepared) * Number(price)
+      }, 0)
 
       const dailyData = (weekSummary || []).map(row => ({
         date: new Date(row.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
@@ -101,6 +122,8 @@ export default function Dashboard() {
       setStats({
         todaySales,
         todayOrders,
+        todayStockUpdates,
+        todayStockValue,
         bestSelling: bestSelling.length ? bestSelling : [{ name: 'No sales today', quantity: 0 }],
         lowStock
       })
@@ -129,7 +152,7 @@ export default function Dashboard() {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
         <div className="card bg-gradient-to-br from-primary-500 to-primary-600 text-white">
           <div className="flex items-center justify-between">
             <div>
@@ -147,6 +170,26 @@ export default function Dashboard() {
               <p className="text-3xl font-bold mt-2">{stats.todayOrders}</p>
             </div>
             <ShoppingBag className="w-12 h-12 text-blue-200" />
+          </div>
+        </div>
+
+        <div className="card bg-gradient-to-br from-teal-500 to-teal-600 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-teal-100 text-sm font-medium">Today's Stock Updates</p>
+              <p className="text-3xl font-bold mt-2">{stats.todayStockUpdates}</p>
+            </div>
+            <ShoppingBag className="w-12 h-12 text-teal-200" />
+          </div>
+        </div>
+
+        <div className="card bg-gradient-to-br from-emerald-500 to-emerald-600 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-emerald-100 text-sm font-medium">Today's Stock Value</p>
+              <p className="text-3xl font-bold mt-2">₹{stats.todayStockValue.toFixed(2)}</p>
+            </div>
+            <DollarSign className="w-12 h-12 text-emerald-200" />
           </div>
         </div>
 

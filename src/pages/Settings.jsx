@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { Plus, Edit2, Trash2, Save, X } from 'lucide-react'
-import { convertToTamil, convertToEnglish } from '../lib/tamilTranslations'
+import { convertToTamil, convertToEnglish, searchWithTanglish } from '../lib/tamilTranslations'
 import { supabase } from '../lib/supabase'
 
 export default function Settings() {
   const [menuItems, setMenuItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [searchQuery, setSearchQuery] = useState('')
 
   // modal + edit
   const [showModal, setShowModal] = useState(false)
@@ -154,6 +155,13 @@ export default function Settings() {
     )
   }
 
+  const filteredItems = menuItems.filter(item => {
+    if (!searchQuery) return true
+    const tamilName = convertToTamil(item.name)
+    const englishName = convertToEnglish(item.name)
+    return searchWithTanglish(searchQuery, tamilName) || searchWithTanglish(searchQuery, englishName)
+  })
+
   return (
     <div className="min-h-screen bg-gray-50 pb-4">
       {/* HEADER */}
@@ -168,6 +176,15 @@ export default function Settings() {
             <span className="hidden sm:inline">New Item</span>
           </button>
         </div>
+
+        <div className="mt-3">
+          <input
+            className="w-full px-4 py-2.5 text-base rounded-lg border border-gray-300 focus:border-orange-500 focus:outline-none transition"
+            placeholder="Search items (sambar, rasam, idli, etc)…"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
+        </div>
       </div>
 
       {/* ERROR MESSAGE */}
@@ -179,13 +196,13 @@ export default function Settings() {
 
       {/* MENU LIST - List View */}
       <div className="p-4 space-y-2">
-        {menuItems.length === 0 ? (
+        {filteredItems.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             No items found
           </div>
         ) : (
           <div className="space-y-2">
-            {menuItems.map((item) => {
+            {filteredItems.map((item) => {
               const tamilName = convertToTamil(item.name)
               const isTamilName = /[\u0B80-\u0BFF]/.test(item.name)
               const englishName = isTamilName ? convertToEnglish(item.name) : item.name
