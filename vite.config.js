@@ -7,5 +7,8 @@ export default defineConfig({
     port: 3002,
     // Allow Vite to fall back to the next free port if 3001 is busy
     strictPort: false
+  },
+  define: {
+    'process.env': {}
   }
 })

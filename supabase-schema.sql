@@ -5,22 +5,26 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Menu Items Table
-CREATE TABLE menu_items (
+CREATE TABLE IF NOT EXISTS menu_items (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   name VARCHAR(255) NOT NULL,
   price DECIMAL(10, 2) NOT NULL,
   daily_stock_quantity DECIMAL(10, 2) DEFAULT 0,
   unit VARCHAR(50) DEFAULT 'litres',
+  category VARCHAR(50) DEFAULT 'veg',
   is_enabled BOOLEAN DEFAULT true,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Add category column if it doesn't exist
+ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS category VARCHAR(50) DEFAULT 'veg';
+
 -- Note: 'name' stores Tamil menu item names only.
 -- English input is auto-converted to Tamil in the frontend before saving.
 
 -- Orders Table
-CREATE TABLE orders (
+CREATE TABLE IF NOT EXISTS orders (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   order_number VARCHAR(50) UNIQUE NOT NULL,
   total_amount DECIMAL(10, 2) NOT NULL,
@@ -31,7 +35,7 @@ CREATE TABLE orders (
 );
 
 -- Order Items Table
-CREATE TABLE order_items (
+CREATE TABLE IF NOT EXISTS order_items (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   order_id UUID REFERENCES orders(id) ON DELETE CASCADE,
   menu_item_id UUID REFERENCES menu_items(id),
@@ -43,7 +47,7 @@ CREATE TABLE order_items (
 );
 
 -- Stock Logs Table
-CREATE TABLE stock_logs (
+CREATE TABLE IF NOT EXISTS stock_logs (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   menu_item_id UUID REFERENCES menu_items(id) ON DELETE CASCADE,
   date DATE DEFAULT CURRENT_DATE,
@@ -56,7 +60,7 @@ CREATE TABLE stock_logs (
 );
 
 -- Daily Sales Summary Table
-CREATE TABLE daily_sales_summary (
+CREATE TABLE IF NOT EXISTS daily_sales_summary (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   date DATE DEFAULT CURRENT_DATE,
   total_orders INTEGER DEFAULT 0,
@@ -67,13 +71,13 @@ CREATE TABLE daily_sales_summary (
 );
 
 -- Create indexes for better performance
-CREATE INDEX idx_orders_created_at ON orders(created_at);
-CREATE INDEX idx_orders_status ON orders(status);
-CREATE INDEX idx_order_items_order_id ON order_items(order_id);
-CREATE INDEX idx_order_items_menu_item_id ON order_items(menu_item_id);
-CREATE INDEX idx_stock_logs_date ON stock_logs(date);
-CREATE INDEX idx_stock_logs_menu_item_id ON stock_logs(menu_item_id);
-CREATE INDEX idx_daily_sales_summary_date ON daily_sales_summary(date);
+CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at);
+CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+CREATE INDEX IF NOT EXISTS idx_order_items_order_id ON order_items(order_id);
+CREATE INDEX IF NOT EXISTS idx_order_items_menu_item_id ON order_items(menu_item_id);
+CREATE INDEX IF NOT EXISTS idx_stock_logs_date ON stock_logs(date);
+CREATE INDEX IF NOT EXISTS idx_stock_logs_menu_item_id ON stock_logs(menu_item_id);
+CREATE INDEX IF NOT EXISTS idx_daily_sales_summary_date ON daily_sales_summary(date);
 
 -- Function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -85,12 +89,15 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Triggers for updated_at
+DROP TRIGGER IF EXISTS update_menu_items_updated_at ON menu_items;
 CREATE TRIGGER update_menu_items_updated_at BEFORE UPDATE ON menu_items
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_stock_logs_updated_at ON stock_logs;
 CREATE TRIGGER update_stock_logs_updated_at BEFORE UPDATE ON stock_logs
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+DROP TRIGGER IF EXISTS update_daily_sales_summary_updated_at ON daily_sales_summary;
 CREATE TRIGGER update_daily_sales_summary_updated_at BEFORE UPDATE ON daily_sales_summary
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
@@ -130,6 +137,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to update stock when order item is created
+DROP TRIGGER IF EXISTS trigger_update_stock_on_order ON order_items;
 CREATE TRIGGER trigger_update_stock_on_order
 AFTER INSERT ON order_items
 FOR EACH ROW
@@ -152,6 +160,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to update daily sales summary when order is created
+DROP TRIGGER IF EXISTS trigger_update_daily_sales_summary ON orders;
 CREATE TRIGGER trigger_update_daily_sales_summary
 AFTER INSERT ON orders
 FOR EACH ROW
@@ -164,26 +173,46 @@ ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE stock_logs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE daily_sales_summary ENABLE ROW LEVEL SECURITY;
 
--- Create policies for public access (adjust as needed for your security requirements)
+-- Create policies for public access - ANON ROLE
+DROP POLICY IF EXISTS "Enable read access for all users" ON menu_items;
+DROP POLICY IF EXISTS "Enable insert for all users" ON menu_items;
+DROP POLICY IF EXISTS "Enable update for all users" ON menu_items;
+DROP POLICY IF EXISTS "Enable delete for all users" ON menu_items;
+
 CREATE POLICY "Enable read access for all users" ON menu_items FOR SELECT USING (true);
 CREATE POLICY "Enable insert for all users" ON menu_items FOR INSERT WITH CHECK (true);
-CREATE POLICY "Enable update for all users" ON menu_items FOR UPDATE USING (true);
+CREATE POLICY "Enable update for all users" ON menu_items FOR UPDATE USING (true) WITH CHECK (true);
 CREATE POLICY "Enable delete for all users" ON menu_items FOR DELETE USING (true);
+
+DROP POLICY IF EXISTS "Enable read access for all users" ON orders;
+DROP POLICY IF EXISTS "Enable insert for all users" ON orders;
+DROP POLICY IF EXISTS "Enable update for all users" ON orders;
 
 CREATE POLICY "Enable read access for all users" ON orders FOR SELECT USING (true);
 CREATE POLICY "Enable insert for all users" ON orders FOR INSERT WITH CHECK (true);
-CREATE POLICY "Enable update for all users" ON orders FOR UPDATE USING (true);
+CREATE POLICY "Enable update for all users" ON orders FOR UPDATE USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Enable read access for all users" ON order_items;
+DROP POLICY IF EXISTS "Enable insert for all users" ON order_items;
 
 CREATE POLICY "Enable read access for all users" ON order_items FOR SELECT USING (true);
 CREATE POLICY "Enable insert for all users" ON order_items FOR INSERT WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Enable read access for all users" ON stock_logs;
+DROP POLICY IF EXISTS "Enable insert for all users" ON stock_logs;
+DROP POLICY IF EXISTS "Enable update for all users" ON stock_logs;
+
 CREATE POLICY "Enable read access for all users" ON stock_logs FOR SELECT USING (true);
 CREATE POLICY "Enable insert for all users" ON stock_logs FOR INSERT WITH CHECK (true);
-CREATE POLICY "Enable update for all users" ON stock_logs FOR UPDATE USING (true);
+CREATE POLICY "Enable update for all users" ON stock_logs FOR UPDATE USING (true) WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Enable read access for all users" ON daily_sales_summary;
+DROP POLICY IF EXISTS "Enable insert for all users" ON daily_sales_summary;
+DROP POLICY IF EXISTS "Enable update for all users" ON daily_sales_summary;
 
 CREATE POLICY "Enable read access for all users" ON daily_sales_summary FOR SELECT USING (true);
 CREATE POLICY "Enable insert for all users" ON daily_sales_summary FOR INSERT WITH CHECK (true);
-CREATE POLICY "Enable update for all users" ON daily_sales_summary FOR UPDATE USING (true);
+CREATE POLICY "Enable update for all users" ON daily_sales_summary FOR UPDATE USING (true) WITH CHECK (true);
 
 -- Insert sample menu items
 INSERT INTO menu_items (name, price, daily_stock_quantity, unit) VALUES
@@ -198,7 +227,8 @@ INSERT INTO menu_items (name, price, daily_stock_quantity, unit) VALUES
 ('Curd Rice', 50.00, 10, 'kg'),
 ('White Rice', 30.00, 20, 'kg'),
 ('Lemon Rice', 60.00, 5, 'kg'),
-('Tamarind Rice', 60.00, 5, 'kg');
+('Tamarind Rice', 60.00, 5, 'kg')
+ON CONFLICT DO NOTHING;
 
 -- Initialize stock logs for today
 INSERT INTO stock_logs (menu_item_id, date, prepared_quantity, sold_quantity, remaining_quantity)
@@ -208,7 +238,8 @@ SELECT
     daily_stock_quantity,
     0,
     daily_stock_quantity
-FROM menu_items;
+FROM menu_items
+ON CONFLICT (menu_item_id, date) DO NOTHING;
 
 -- Initialize daily sales summary for today
 INSERT INTO daily_sales_summary (date, total_orders, total_revenue)
