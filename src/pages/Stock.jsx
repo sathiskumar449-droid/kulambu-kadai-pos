@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Package, TrendingDown, AlertCircle } from 'lucide-react'
-
+import { supabase } from '../lib/supabase'
+import { convertToTamil } from '../lib/tamilTranslations'
 
 export default function Stock() {
   const [menuItems, setMenuItems] = useState([])
@@ -18,19 +19,10 @@ export default function Stock() {
 
       const today = new Date().toISOString().slice(0, 10)
 
-      const { data: items, error: itemsError } = await supabase
-        .from('menu_items')
-        .select('id, name, price, unit, daily_stock_quantity')
-        .order('created_at')
+      const res = await fetch(`/api/supabaseProxy/stock?date=${today}`)
+      if (!res.ok) throw new Error('Proxy API failed')
 
-      if (itemsError) throw itemsError
-
-      const { data: stockLogs, error: logsError } = await supabase
-        .from('stock_logs')
-        .select('menu_item_id, prepared_quantity, remaining_quantity')
-        .eq('date', today)
-
-      if (logsError) throw logsError
+      const { items, stockLogs } = await res.json()
 
       const logsMap = (stockLogs || []).reduce((acc, log) => {
         acc[log.menu_item_id] = log
