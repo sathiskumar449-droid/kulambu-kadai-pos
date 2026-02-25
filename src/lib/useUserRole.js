@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react"
-import { supabase } from "./supabase"
+import { useState, useEffect } from 'react'
+import { supabase } from './supabase'   // 👈 correct import
 
 export function useUserRole() {
   const [role, setRole] = useState(null)
@@ -8,39 +8,41 @@ export function useUserRole() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        // 🔥 Check localStorage first (form login)
-        const storedRole = localStorage.getItem("user_role")
+        // 1️⃣ LocalStorage first (fast + Jio-safe)
+        const storedRole = localStorage.getItem('user_role')
         if (storedRole) {
           setRole(storedRole)
           setLoading(false)
           return
         }
 
-        // 🔐 Check Supabase auth (Google login - future use)
+        // 2️⃣ Supabase auth (only if available)
         const { data: { user }, error } = await supabase.auth.getUser()
-        
+
         if (error || !user) {
           setRole(null)
           setLoading(false)
           return
         }
 
-        // Get role from user_roles table
-        const { data: userRole, error: roleError } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", user.id)
+        // 3️⃣ Optional: fetch role from profiles table
+        const { data, error: profileError } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
           .single()
 
-        if (roleError || !userRole) {
-          setRole(null)
+        if (!profileError && data?.role) {
+          setRole(data.role)
+          localStorage.setItem('user_role', data.role)
         } else {
-          setRole(userRole.role)
+          setRole('staff') // fallback
         }
+
+        setLoading(false)
       } catch (err) {
-        console.error("Auth check failed:", err)
+        console.error('useUserRole error:', err)
         setRole(null)
-      } finally {
         setLoading(false)
       }
     }

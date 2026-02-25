@@ -11,9 +11,12 @@ import {
 } from 'lucide-react'
 import { convertToTamil, convertToEnglish, searchWithTanglish } from '../lib/tamilTranslations'
 import { triggerOrderNotification, requestNotificationPermission } from '../utils/notifications'
+import { useUserRole } from '../lib/useUserRole'
 import Toast from '../components/Toast'
 
 export default function Menu() {
+  const { role, loading: roleLoading } = useUserRole()
+
   const [menuItems, setMenuItems] = useState([])
   const [cart, setCart] = useState([])
   const [loading, setLoading] = useState(true)
@@ -139,10 +142,25 @@ export default function Menu() {
 
   const categories = ['all', ...new Set(menuItems.map(i => i.category))]
 
+  /* ================= ROLE LOADING SAFE ================= */
+  if (roleLoading || loading) {
+    return <div className="p-6 text-center text-gray-600">Loading Menu...</div>
+  }
+
   /* UI PART – UNCHANGED */
   return (
     <div className="min-h-screen bg-gray-50 pb-24 md:pb-6">
-      {/* UI same as before – already working */}
+      {/* 
+        🔐 ROLE BASED UI EXAMPLE:
+
+        {role === 'admin' && (
+          <button className="bg-green-600 text-white px-3 py-1 rounded">
+            Add New Item
+          </button>
+        )}
+
+        Staff users can only order.
+      */}
     </div>
   )
 }
