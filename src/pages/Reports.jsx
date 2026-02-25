@@ -69,6 +69,22 @@ export default function Reports() {
 
       const { ordersData, summaryRows } = await res.json()
 
+      const shift1Data = { revenue: 0, orders: 0, items: [] }
+      const shift2Data = { revenue: 0, orders: 0, items: [] }
+
+        ; (ordersData || []).forEach(order => {
+          const orderHour = new Date(order.created_at).getHours()
+          const isShift1 = orderHour < 17 // Before 5:00 PM
+
+          const targetShift = isShift1 ? shift1Data : shift2Data
+          targetShift.orders += 1
+          targetShift.revenue += Number(order.total_amount || 0)
+
+          if (order.order_items) {
+            targetShift.items.push(...order.order_items)
+          }
+        })
+
       let totalRevenue = 0
       let totalOrders = 0
 
