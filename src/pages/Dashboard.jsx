@@ -31,35 +31,39 @@ export default function Dashboard() {
       const weekAgoStr = weekAgo.toISOString().slice(0, 10)
 
       // Today summary
-      const todayRes = await fetch(
-        `/api/supabaseProxy/daily_sales_summary?select=date,total_revenue,total_orders&date=eq.${todayStr}`
-      )
-      const todayArr = await todayRes.json()
-      const todaySummary = todayArr?.[0] || null
+const todayRes = await fetch(
+  `/api/supabaseProxy/daily_sales_summary?select=date,total_revenue,total_orders&date=eq.${todayStr}`
+)
+if (!todayRes.ok) throw new Error('today summary failed')
+const todayArr = await todayRes.json()
 
-      // Week summary
-      const weekRes = await fetch(
-        `/api/supabaseProxy/daily_sales_summary?select=date,total_revenue,total_orders&date=gte.${weekAgoStr}&date=lte.${todayStr}&order=date.asc`
-      )
-      const weekSummary = await weekRes.json()
+// Week summary
+const weekRes = await fetch(
+  `/api/supabaseProxy/daily_sales_summary?select=date,total_revenue,total_orders&date=gte.${weekAgoStr}&date=lte.${todayStr}&order=date.asc`
+)
+if (!weekRes.ok) throw new Error('week summary failed')
+const weekSummary = await weekRes.json()
 
-      // Items sold today
-      const itemsRes = await fetch(
-        `/api/supabaseProxy/order_items?select=item_name,quantity,price,subtotal,created_at&created_at=gte.${todayStr}T00:00:00.000Z&created_at=lte.${todayStr}T23:59:59.999Z`
-      )
-      const itemsToday = await itemsRes.json()
+// Items sold today
+const itemsRes = await fetch(
+  `/api/supabaseProxy/order_items?select=item_name,quantity,price,subtotal,created_at&created_at=gte.${todayStr}T00:00:00.000Z&created_at=lte.${todayStr}T23:59:59.999Z`
+)
+if (!itemsRes.ok) throw new Error('items today failed')
+const itemsToday = await itemsRes.json()
 
-      // Stock logs today
-      const stockRes = await fetch(
-        `/api/supabaseProxy/stock_logs?select=menu_item_id,remaining_quantity,prepared_quantity,menu_items(name,unit,daily_stock_quantity,price)&date=eq.${todayStr}`
-      )
-      const stockRows = await stockRes.json()
+// Stock logs today
+const stockRes = await fetch(
+  `/api/supabaseProxy/stock_logs?select=menu_item_id,remaining_quantity,prepared_quantity,menu_items(name,unit,daily_stock_quantity,price)&date=eq.${todayStr}`
+)
+if (!stockRes.ok) throw new Error('stock logs failed')
+const stockRows = await stockRes.json()
 
-      // Menu items
-      const menuRes = await fetch(
-        `/api/supabaseProxy/menu_items?select=id,name,daily_stock_quantity,price`
-      )
-      const menuItems = await menuRes.json()
+// Menu items
+const menuRes = await fetch(
+  `/api/supabaseProxy/menu_items?select=id,name,daily_stock_quantity,price`
+)
+if (!menuRes.ok) throw new Error('menu items failed')
+const menuItems = await menuRes.json()
 
       const bestSellingMap = {}
       ;(itemsToday || []).forEach(row => {

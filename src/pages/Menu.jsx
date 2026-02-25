@@ -11,7 +11,7 @@ import {
 } from 'lucide-react'
 import { convertToTamil, convertToEnglish, searchWithTanglish } from '../lib/tamilTranslations'
 import { triggerOrderNotification, requestNotificationPermission } from '../utils/notifications'
-import {useUserRole } from '../lib/useUserRole'
+import { useUserRole } from '../lib/useUserRole'
 import Toast from '../components/Toast'
 
 export default function Menu() {

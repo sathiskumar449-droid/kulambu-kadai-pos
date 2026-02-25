@@ -14,8 +14,7 @@ import {
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { useUserRole } from '../lib/useUserRole'          // ✅ FIX 1
-import { supabase } from '../lib/supabase'                // ✅ FIX 2
+import { useUserRole } from '../lib/useUserRole'          // ✅ FIX              // ✅ FIX 2
 
 export default function Layout() {
   const location = useLocation()
@@ -27,53 +26,26 @@ export default function Layout() {
 
   /* ---------------- ORDERS BADGE ---------------- */
   useEffect(() => {
-  if (!supabase) {
-    console.warn('⚠️ Supabase not initialized. Skipping badge realtime.')
-    return
-  }
-
   let pollInterval
-  let channel
 
   const loadPending = async () => {
     try {
-      const { count, error } = await supabase
-        .from('orders')
-        .select('*', { count: 'exact', head: true })
-        .or('status.eq.Pending,status.eq.PENDING')
-
-      if (!error && typeof count === 'number') {
-        setOrderCount(count)
+      const res = await fetch('/api/supabaseProxy/pendingOrdersCount')
+      if (!res.ok) return
+      const data = await res.json()
+      if (typeof data.count === 'number') {
+        setOrderCount(data.count)
       }
     } catch (e) {
-      console.error('❌ Badge Exception:', e)
+      console.error('Badge fetch error:', e)
     }
   }
 
   loadPending()
   pollInterval = setInterval(loadPending, 5000)
 
-  try {
-    channel = supabase
-      .channel('layout-orders-badge-safe')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'orders' },
-        () => loadPending()
-      )
-      .subscribe()
-  } catch (e) {
-    console.warn('⚠️ Realtime not available. Using polling only.')
-  }
-
-  return () => {
-    if (pollInterval) clearInterval(pollInterval)
-    if (channel && supabase?.removeChannel) {
-      supabase.removeChannel(channel)
-    }
-  }
+  return () => clearInterval(pollInterval)
 }, [])
-
   /* ---------------- DARK MODE ---------------- */
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDarkMode)
