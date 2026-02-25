@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Plus, Edit2, Trash2, Save, X } from 'lucide-react'
 import { convertToTamil, convertToEnglish, searchWithTanglish } from '../lib/tamilTranslations'
-import { supabase } from '../lib/supabase'
 
 export default function Settings() {
   const [menuItems, setMenuItems] = useState([])
@@ -9,7 +8,6 @@ export default function Settings() {
   const [error, setError] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
 
-  // modal + edit
   const [showModal, setShowModal] = useState(false)
   const [editingId, setEditingId] = useState(null)
 
@@ -21,7 +19,6 @@ export default function Settings() {
     is_enabled: true
   })
 
-  // load menu
   useEffect(() => {
     fetchMenu()
   }, [])
@@ -30,13 +27,9 @@ export default function Settings() {
     try {
       setLoading(true)
       setError(null)
-
-      const { data, error: fetchError } = await supabase
-        .from('menu_items')
-        .select('id, name, price, daily_stock_quantity, unit, is_enabled')
-        .order('created_at', { ascending: false })
-
-      if (fetchError) throw fetchError
+      const res = await fetch('/api/supabaseProxy/menu_items?select=id,name,price,daily_stock_quantity,unit,is_enabled&order=created_at.desc')
+      if (!res.ok) throw new Error('Proxy fetch failed')
+      const data = await res.json()
       setMenuItems(data || [])
     } catch (err) {
       console.error('Failed to load menu:', err)
@@ -47,42 +40,36 @@ export default function Settings() {
   }
 
   const resetForm = () => {
-    setFormData({
-      name: '',
-      price: '',
-      stock_qty: '',
-      unit: 'bowl',
-      is_enabled: true
-    })
+    setFormData({ name: '', price: '', stock_qty: '', unit: 'bowl', is_enabled: true })
     setEditingId(null)
     setShowModal(false)
   }
 
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target
-    setFormData({
-      ...formData,
-      [name]: type === 'checkbox' ? checked : value
-    })
+    setFormData({ ...formData, [name]: type === 'checkbox' ? checked : value })
   }
 
   // ADD
   const handleAdd = async (e) => {
     e.preventDefault()
-
     try {
       setError(null)
-      const tamilName = convertToTamil(formData.name)
-
-      const { error: insertError } = await supabase.from('menu_items').insert([{
-        name: tamilName,
+      const payload = {
+        name: convertToTamil(formData.name),
         price: Number(formData.price),
         daily_stock_quantity: Number(formData.stock_qty),
         unit: formData.unit || 'bowl',
         is_enabled: formData.is_enabled
-      }])
+      }
 
-      if (insertError) throw insertError
+      const res = await fetch('/api/supabaseProxy/menu_items', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
+
+      if (!res.ok) throw new Error('Add failed')
       await fetchMenu()
       resetForm()
     } catch (err) {
@@ -106,23 +93,24 @@ export default function Settings() {
 
   const handleUpdate = async (e) => {
     e.preventDefault()
-
     try {
       setError(null)
-      const tamilName = convertToTamil(formData.name)
+      const payload = {
+        id: editingId,
+        name: convertToTamil(formData.name),
+        price: Number(formData.price),
+        daily_stock_quantity: Number(formData.stock_qty),
+        unit: formData.unit || 'bowl',
+        is_enabled: formData.is_enabled
+      }
 
-      const { error: updateError } = await supabase
-        .from('menu_items')
-        .update({
-          name: tamilName,
-          price: Number(formData.price),
-          daily_stock_quantity: Number(formData.stock_qty),
-          unit: formData.unit || 'bowl',
-          is_enabled: formData.is_enabled
-        })
-        .eq('id', editingId)
+      const res = await fetch('/api/supabaseProxy/menu_items', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      })
 
-      if (updateError) throw updateError
+      if (!res.ok) throw new Error('Update failed')
       await fetchMenu()
       resetForm()
     } catch (err) {
@@ -134,12 +122,12 @@ export default function Settings() {
   const handleDelete = async (id) => {
     try {
       setError(null)
-      const { error: deleteError } = await supabase
-        .from('menu_items')
-        .delete()
-        .eq('id', id)
-
-      if (deleteError) throw deleteError
+      const res = await fetch('/api/supabaseProxy/menu_items', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      })
+      if (!res.ok) throw new Error('Delete failed')
       setMenuItems(menuItems.filter(item => item.id !== id))
     } catch (err) {
       console.error('Delete failed:', err)
@@ -170,201 +158,55 @@ export default function Settings() {
           <h2 className="text-xl md:text-2xl font-bold">Menu Management</h2>
           <button
             onClick={() => setShowModal(true)}
-            className="bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white px-3 md:px-4 py-2 md:py-2.5 rounded-lg font-semibold flex items-center gap-2 text-sm md:text-base transition"
+            className="bg-orange-500 hover:bg-orange-600 text-white px-3 py-2 rounded-lg font-semibold flex items-center gap-2"
           >
             <Plus className="w-5 h-5" />
-            <span className="hidden sm:inline">New Item</span>
+            New Item
           </button>
         </div>
 
         <div className="mt-3">
           <input
-            className="w-full px-4 py-2.5 text-base rounded-lg border border-gray-300 focus:border-orange-500 focus:outline-none transition"
-            placeholder="Search items (sambar, rasam, idli, etc)…"
+            className="w-full px-4 py-2.5 rounded-lg border border-gray-300 focus:border-orange-500 focus:outline-none"
+            placeholder="Search items…"
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
           />
         </div>
       </div>
 
-      {/* ERROR MESSAGE */}
       {error && (
         <div className="m-4 bg-red-50 border-l-4 border-red-500 text-red-700 p-4 rounded">
           {error}
         </div>
       )}
 
-      {/* MENU LIST - List View */}
       <div className="p-4 space-y-2">
-        {filteredItems.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            No items found
+        {filteredItems.map(item => (
+          <div key={item.id} className="bg-white border rounded-lg p-3 flex justify-between items-center">
+            <div>
+              <h3 className="font-bold">{convertToTamil(item.name)}</h3>
+              <p className="text-sm text-gray-500">₹{item.price} • Stock: {item.daily_stock_quantity} {item.unit}</p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={() => handleEdit(item)} className="bg-blue-500 text-white px-2 py-1 rounded"><Edit2 size={16} /></button>
+              <button onClick={() => handleDelete(item.id)} className="bg-red-500 text-white px-2 py-1 rounded"><Trash2 size={16} /></button>
+            </div>
           </div>
-        ) : (
-          <div className="space-y-2">
-            {filteredItems.map((item) => {
-              const tamilName = convertToTamil(item.name)
-              const isTamilName = /[\u0B80-\u0BFF]/.test(item.name)
-              const englishName = isTamilName ? convertToEnglish(item.name) : item.name
-              
-              return (
-                <div key={item.id} className="bg-white border-2 border-gray-200 rounded-lg shadow-sm hover:shadow-md transition p-3">
-                  <div className="flex items-center gap-3">
-                    {/* Item Details */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-bold text-base md:text-lg text-gray-800">
-                          {tamilName}
-                        </h3>
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
-                          item.is_enabled 
-                            ? 'bg-green-100 text-green-700' 
-                            : 'bg-gray-200 text-gray-600'
-                        }`}>
-                          {item.is_enabled ? 'Available' : 'Inactive'}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-500 mb-1">
-                        {englishName}
-                      </p>
-                      <div className="flex items-center gap-3 text-sm">
-                        <span className="text-lg font-bold text-orange-600">
-                          ₹{item.price}
-                        </span>
-                        <span className="text-gray-600">
-                          Stock: <span className="font-semibold">{item.daily_stock_quantity} {item.unit}</span>
-                        </span>
-                        <span className="text-gray-400 text-xs">#{item.id}</span>
-                      </div>
-                    </div>
-
-                    {/* Action Buttons */}
-                    <div className="flex gap-2 flex-shrink-0">
-                      <button
-                        onClick={() => handleEdit(item)}
-                        className="bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white px-3 py-2 rounded-lg font-semibold text-sm transition flex items-center gap-1"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                        <span className="hidden md:inline">Edit</span>
-                      </button>
-                      <button
-                        onClick={() => handleDelete(item.id)}
-                        className="bg-red-500 hover:bg-red-600 active:bg-red-700 text-white px-3 py-2 rounded-lg font-semibold text-sm transition flex items-center gap-1"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        <span className="hidden md:inline">Delete</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        )}
+        ))}
       </div>
 
-      {/* MODAL - Mobile Optimized */}
       {showModal && (
-        <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm flex items-end md:items-center justify-center p-4 animate-fade-in">
-          <div className="bg-white rounded-t-2xl md:rounded-2xl w-full md:max-w-md max-h-[90vh] overflow-y-auto shadow-2xl">
-            {/* Modal Header */}
-            <div className="sticky top-0 flex items-center justify-between p-4 border-b border-gray-200 bg-white rounded-t-2xl">
-              <h3 className="text-lg md:text-xl font-bold">
-                {editingId ? 'Edit Item' : 'Add New Item'}
-              </h3>
-              <button
-                onClick={resetForm}
-                className="text-gray-500 hover:text-gray-700 p-1"
-              >
-                <X size={24} />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <form
-              onSubmit={editingId ? handleUpdate : handleAdd}
-              className="p-4 space-y-4"
-            >
-              {/* Name Input */}
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
-                  Item Name
-                </label>
-                <input
-                  type="text"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none text-base transition"
-                  placeholder="sambar / சாம்பார்"
-                />
-              </div>
-
-              {/* Price & Stock Row */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Price (₹)
-                  </label>
-                  <input
-                    type="number"
-                    name="price"
-                    value={formData.price}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none text-base transition"
-                    placeholder="50"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Stock Quantity
-                  </label>
-                  <input
-                    type="number"
-                    name="stock_qty"
-                    value={formData.stock_qty}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:border-orange-500 focus:outline-none text-base transition"
-                    placeholder="20"
-                  />
-                </div>
-              </div>
-
-              {/* Status Checkbox */}
-              <div className="flex items-center gap-3 bg-gray-50 p-3 rounded-lg">
-                <input
-                  type="checkbox"
-                  id="is_enabled"
-                  name="is_enabled"
-                  checked={formData.is_enabled}
-                  onChange={handleInputChange}
-                  className="w-5 h-5 cursor-pointer"
-                />
-                <label htmlFor="is_enabled" className="text-sm font-semibold text-gray-700 cursor-pointer">
-                  This item is available
-                </label>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-3 pt-4 border-t border-gray-200">
-                <button
-                  type="submit"
-                  className="flex-1 bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white py-3 rounded-lg font-bold text-base transition flex items-center justify-center gap-2"
-                >
-                  <Save className="w-5 h-5" />
-                  {editingId ? 'Update' : 'Add'}
-                </button>
-                <button
-                  type="button"
-                  onClick={resetForm}
-                  className="flex-1 bg-gray-300 hover:bg-gray-400 active:bg-gray-500 text-gray-700 py-3 rounded-lg font-bold text-base transition"
-                >
-                  Cancel
-                </button>
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center p-4">
+          <div className="bg-white rounded-lg w-full max-w-md p-4">
+            <h3 className="font-bold mb-3">{editingId ? 'Edit Item' : 'Add Item'}</h3>
+            <form onSubmit={editingId ? handleUpdate : handleAdd} className="space-y-3">
+              <input name="name" value={formData.name} onChange={handleInputChange} placeholder="Item name" className="w-full border p-2 rounded" required />
+              <input name="price" type="number" value={formData.price} onChange={handleInputChange} placeholder="Price" className="w-full border p-2 rounded" required />
+              <input name="stock_qty" type="number" value={formData.stock_qty} onChange={handleInputChange} placeholder="Stock" className="w-full border p-2 rounded" required />
+              <div className="flex gap-2">
+                <button type="submit" className="flex-1 bg-orange-500 text-white p-2 rounded">{editingId ? 'Update' : 'Add'}</button>
+                <button type="button" onClick={resetForm} className="flex-1 bg-gray-300 p-2 rounded">Cancel</button>
               </div>
             </form>
           </div>

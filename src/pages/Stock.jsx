@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Package, TrendingDown, AlertCircle } from 'lucide-react'
-import { supabase } from '../lib/supabase'
-import { convertToTamil } from '../lib/tamilTranslations'
+
 
 export default function Stock() {
   const [menuItems, setMenuItems] = useState([])

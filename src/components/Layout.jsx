@@ -14,8 +14,7 @@ import {
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { supabase } from '../lib/supabase'
-import { useUserRole } from '../lib/useUserRole'
+
 
 export default function Layout() {
   const location = useLocation()

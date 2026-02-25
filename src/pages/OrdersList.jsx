@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
-import { CheckCircle, Clock, Trash2 } from 'lucide-react'
+import { CheckCircle, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { convertToTamil } from '../lib/tamilTranslations'
-import { supabase } from '../lib/supabase'
 
 export default function OrdersList() {
   const [orders, setOrders] = useState([])
@@ -12,28 +11,18 @@ export default function OrdersList() {
 
   useEffect(() => {
     fetchOrders()
-
-    const channel = supabase.channel('orders-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, fetchOrders)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, fetchOrders)
-      .subscribe()
-
-    return () => {
-      supabase.removeChannel(channel)
-    }
+    const t = setInterval(fetchOrders, 15000) // polling instead of realtime (Jio-safe)
+    return () => clearInterval(t)
   }, [])
 
-  const fetchOrders = async () => {
+  async function fetchOrders() {
     try {
       setLoading(true)
       setError(null)
 
-      const { data, error: fetchError } = await supabase
-        .from('orders')
-        .select('id, order_number, status, total_amount, created_at, order_items (item_name, quantity, price, subtotal)')
-        .order('created_at', { ascending: false })
-
-      if (fetchError) throw fetchError
+      const res = await fetch('/api/supabaseProxy/orders')
+      if (!res.ok) throw new Error('Orders proxy failed')
+      const data = await res.json()
 
       const normalized = (data || []).map(o => ({
         id: o.id,
@@ -57,21 +46,51 @@ export default function OrdersList() {
     }
   }
 
+  async function markPlaced(id) {
+    try {
+      const res = await fetch('/api/supabaseProxy/updateOrderStatus', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id, status: 'PLACED' })
+      })
+      if (!res.ok) throw new Error('Status update failed')
+      fetchOrders()
+    } catch (e) {
+      console.error(e)
+      setError('Could not update order status.')
+    }
+  }
+
+  async function deleteOrder(id) {
+    try {
+      const res = await fetch('/api/supabaseProxy/deleteOrder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      })
+      if (!res.ok) throw new Error('Delete failed')
+      fetchOrders()
+    } catch (e) {
+      console.error(e)
+      setError('Could not delete order.')
+    }
+  }
+
   const filtered =
-    filter === 'ALL'
-      ? orders
-      : orders.filter(o => o.status === filter)
+    filter === 'ALL' ? orders : orders.filter(o => o.status === filter)
+
+  if (loading) return <div className="text-gray-500">Loading orders…</div>
+  if (error) return <div className="card bg-red-50 text-red-700 p-3">{error}</div>
 
   return (
     <div className="space-y-4">
-      {loading && <div className="text-gray-500">Loading orders…</div>}
-      {error && (
-        <div className="card bg-red-50 text-red-700 p-3">{error}</div>
-      )}
-
       <div className="flex gap-2">
         {['ALL', 'PENDING', 'PLACED'].map(s => (
-          <button key={s} onClick={() => setFilter(s)} className="btn-secondary">
+          <button
+            key={s}
+            onClick={() => setFilter(s)}
+            className={`btn-secondary ${filter === s ? 'ring-2 ring-orange-400' : ''}`}
+          >
             {s}
           </button>
         ))}
@@ -100,37 +119,12 @@ export default function OrdersList() {
 
           <div className="flex gap-2 mt-3">
             {o.status === 'PENDING' && (
-              <button
-                className="btn-primary"
-                onClick={async () => {
-                  const { error: updateError } = await supabase
-                    .from('orders')
-                    .update({ status: 'PLACED' })
-                    .eq('id', o.id)
-
-                  if (updateError) {
-                    console.error('Failed to update status:', updateError)
-                    setError('Could not update order status.')
-                  }
-                }}
-              >
-                <CheckCircle /> Mark Placed
+              <button className="btn-primary" onClick={() => markPlaced(o.id)}>
+                <CheckCircle size={16} /> Mark Placed
               </button>
             )}
-            <button
-              className="btn-secondary"
-              onClick={async () => {
-                const { error: deleteError } = await supabase
-                  .from('orders')
-                  .delete()
-                  .eq('id', o.id)
-                if (deleteError) {
-                  console.error('Delete failed:', deleteError)
-                  setError('Could not delete order.')
-                }
-              }}
-            >
-              <Trash2 /> Delete
+            <button className="btn-secondary" onClick={() => deleteOrder(o.id)}>
+              <Trash2 size={16} /> Delete
             </button>
           </div>
         </div>
