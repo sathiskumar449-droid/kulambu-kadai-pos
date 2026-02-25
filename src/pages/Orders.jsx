@@ -2,7 +2,9 @@ import { useState, useEffect } from 'react'
 import { CheckCircle, Trash2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { convertToTamil } from '../lib/tamilTranslations'
-import { supabase } from '../lib/supabase'
+const res = await fetch('/api/supabaseProxy/orders')
+const data = await res.json()
+setOrders(data || [])
 import { triggerOrderNotification, requestNotificationPermission } from '../utils/notifications'
 import Toast from '../components/Toast'
 import { useUserRole } from '../lib/useUserRole'

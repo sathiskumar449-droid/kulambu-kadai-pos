@@ -1,4 +1,4 @@
-// api/supabaseProxy/menu_items.js
+// api/supabaseProxy/orders.js
 import { createClient } from '@supabase/supabase-js'
 
 const supabase = createClient(
@@ -7,11 +7,14 @@ const supabase = createClient(
 )
 
 export default async function handler(req, res) {
+  if (req.method !== 'GET') {
+    return res.status(405).json({ error: 'Method not allowed' })
+  }
+
   const { data, error } = await supabase
-    .from('menu_items')
-    .select('id,name,price,is_enabled,category')
-    .eq('is_enabled', true)
-    .order('created_at')
+    .from('orders')
+    .select('id,order_number,status,total_amount,created_at')
+    .order('created_at', { ascending: false })
 
   if (error) return res.status(500).json({ error: error.message })
   res.status(200).json(data)

@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react'
 import { TrendingUp, ShoppingBag, AlertTriangle, DollarSign } from 'lucide-react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts'
-import { supabase } from '../lib/supabase'
 import { convertToTamil } from '../lib/tamilTranslations'
-
 export default function Dashboard() {
   const [stats, setStats] = useState({
     todaySales: 0,
@@ -19,16 +17,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     fetchDashboard()
-
-    const channel = supabase.channel('dashboard-realtime')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, fetchDashboard)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, fetchDashboard)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'daily_sales_summary' }, fetchDashboard)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'menu_items' }, fetchDashboard)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'stock_logs' }, fetchDashboard)
-      .subscribe()
-
-    return () => supabase.removeChannel(channel)
+    // ❌ Realtime disabled for Jio compatibility
   }, [])
 
   const fetchDashboard = async () => {
@@ -39,44 +28,38 @@ export default function Dashboard() {
       const todayStr = new Date().toISOString().slice(0, 10)
       const weekAgo = new Date()
       weekAgo.setDate(weekAgo.getDate() - 6)
+      const weekAgoStr = weekAgo.toISOString().slice(0, 10)
 
-      const { data: todaySummary, error: summaryError } = await supabase
-        .from('daily_sales_summary')
-        .select('date, total_revenue, total_orders')
-        .eq('date', todayStr)
-        .maybeSingle()
+      // Today summary
+      const todayRes = await fetch(
+        `/api/supabaseProxy/daily_sales_summary?select=date,total_revenue,total_orders&date=eq.${todayStr}`
+      )
+      const todayArr = await todayRes.json()
+      const todaySummary = todayArr?.[0] || null
 
-      if (summaryError) throw summaryError
+      // Week summary
+      const weekRes = await fetch(
+        `/api/supabaseProxy/daily_sales_summary?select=date,total_revenue,total_orders&date=gte.${weekAgoStr}&date=lte.${todayStr}&order=date.asc`
+      )
+      const weekSummary = await weekRes.json()
 
-      const { data: weekSummary, error: weekError } = await supabase
-        .from('daily_sales_summary')
-        .select('date, total_revenue, total_orders')
-        .gte('date', weekAgo.toISOString().slice(0, 10))
-        .lte('date', todayStr)
-        .order('date')
+      // Items sold today
+      const itemsRes = await fetch(
+        `/api/supabaseProxy/order_items?select=item_name,quantity,price,subtotal,created_at&created_at=gte.${todayStr}T00:00:00.000Z&created_at=lte.${todayStr}T23:59:59.999Z`
+      )
+      const itemsToday = await itemsRes.json()
 
-      if (weekError) throw weekError
+      // Stock logs today
+      const stockRes = await fetch(
+        `/api/supabaseProxy/stock_logs?select=menu_item_id,remaining_quantity,prepared_quantity,menu_items(name,unit,daily_stock_quantity,price)&date=eq.${todayStr}`
+      )
+      const stockRows = await stockRes.json()
 
-      const { data: itemsToday, error: itemsError } = await supabase
-        .from('order_items')
-        .select('item_name, quantity, price, subtotal, created_at')
-        .gte('created_at', new Date(todayStr).toISOString())
-        .lte('created_at', new Date(`${todayStr}T23:59:59.999Z`).toISOString())
-
-      if (itemsError) throw itemsError
-
-      const { data: stockRows, error: stockError } = await supabase
-        .from('stock_logs')
-        .select('menu_item_id, remaining_quantity, prepared_quantity, menu_items(name, unit, daily_stock_quantity, price)')
-        .eq('date', todayStr)
-
-      if (stockError) throw stockError
-
-      const { data: menuItems, error: menuError } = await supabase
-        .from('menu_items')
-        .select('id, name, daily_stock_quantity, price')
-
-      if (menuError) throw menuError
+      // Menu items
+      const menuRes = await fetch(
+        `/api/supabaseProxy/menu_items?select=id,name,daily_stock_quantity,price`
+      )
+      const menuItems = await menuRes.json()
 
       const bestSellingMap = {}
       ;(itemsToday || []).forEach(row => {
@@ -100,6 +83,7 @@ export default function Dashboard() {
 
       const todaySales = todaySummary?.total_revenue || 0
       const todayOrders = todaySummary?.total_orders || 0
+
       const stockMap = (stockRows || []).reduce((acc, row) => {
         acc[row.menu_item_id] = row
         return acc
@@ -151,7 +135,6 @@ export default function Dashboard() {
         <div className="card bg-red-50 text-red-700 p-3">{error}</div>
       )}
 
-      {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6">
         <div className="card bg-gradient-to-br from-primary-500 to-primary-600 text-white">
           <div className="flex items-center justify-between">
@@ -214,9 +197,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Daily Sales Chart */}
         <div className="card">
           <h3 className="text-lg font-semibold mb-4">Last 7 Days Sales</h3>
           <ResponsiveContainer width="100%" height={300}>
@@ -231,7 +212,6 @@ export default function Dashboard() {
           </ResponsiveContainer>
         </div>
 
-        {/* Best Selling Items Chart */}
         <div className="card">
           <h3 className="text-lg font-semibold mb-4">Best Selling Items (Today)</h3>
           <ResponsiveContainer width="100%" height={300}>
@@ -247,7 +227,6 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Low Stock Alerts */}
       {stats.lowStock.length > 0 && (
         <div className="card">
           <h3 className="text-lg font-semibold mb-4 flex items-center">
