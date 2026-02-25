@@ -14,63 +14,41 @@ import {
 } from 'lucide-react'
 import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { useUserRole } from '../lib/useUserRole'          // ✅ FIX              // ✅ FIX 2
+import { useUserRole } from '../lib/useUserRole'
 
 export default function Layout() {
   const location = useLocation()
-  const { role, loading } = useUserRole()                  // ✅ FIX 3
+  const { role, loading } = useUserRole()
 
   const [orderCount, setOrderCount] = useState(0)
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
-  /* ---------------- ORDERS BADGE ---------------- */
+  /* ---------------- ORDERS BADGE (FIXED) ---------------- */
   useEffect(() => {
-  let pollInterval
+    let pollInterval
 
-  const loadPending = async () => {
-    try {
-      const res = await fetch('/api/supabaseProxy/pendingOrdersCount')
-      if (!res.ok) return
-      const data = await res.json()
-      if (typeof data.count === 'number') {
-        setOrderCount(data.count)
+    const loadPending = async () => {
+      try {
+        const res = await fetch('/api/supabaseProxy/orders?select=id&status=eq.Pending')
+        if (!res.ok) throw new Error('Badge API failed')
+        const data = await res.json()
+        setOrderCount(Array.isArray(data) ? data.length : 0)
+      } catch (e) {
+        console.error('Badge fetch error:', e)
+        setOrderCount(0)
       }
-    } catch (e) {
-      console.error('Badge fetch error:', e)
     }
-  }
 
-  loadPending()
-  pollInterval = setInterval(loadPending, 5000)
+    loadPending()
+    pollInterval = setInterval(loadPending, 5000)
+    return () => clearInterval(pollInterval)
+  }, [])
 
-  return () => clearInterval(pollInterval)
-}, [])
   /* ---------------- DARK MODE ---------------- */
   useEffect(() => {
     document.documentElement.classList.toggle('dark', isDarkMode)
   }, [isDarkMode])
-
-  /* ---------------- NAVIGATION ---------------- */
-  const allNavigation = [
-    { name: 'Dashboard', to: '/dashboard', icon: LayoutDashboard, roles: ['admin'], order: 1 },
-    { name: 'Menu', to: '/menu', icon: UtensilsCrossed, roles: ['admin', 'staff'], order: 2 },
-    { name: 'Orders', to: '/orders', icon: ShoppingCart, roles: ['admin', 'staff'], badge: orderCount, order: 3 },
-    { name: 'Stock', to: '/stock', icon: Package, roles: ['admin', 'staff'], order: 4 },
-    { name: 'Reports', to: '/reports', icon: FileText, roles: ['admin'], order: 5 },
-    { name: 'Settings', to: '/settings', icon: Settings, roles: ['admin'], order: 6 },
-    { name: 'Logout', to: '#', icon: LogOut, roles: ['admin', 'staff'], order: 7, isLogout: true }
-  ]
-
-  const navigation = role
-    ? allNavigation.filter(item => item.roles.includes(role)).sort((a, b) => a.order - b.order)
-    : allNavigation
-
-  /* ---------------- LOGOUT ---------------- */
-  const handleLogout = () => {
-    localStorage.removeItem('user_role')
-    window.location.href = '/login'
-  }
 
   if (loading) {
     return (
@@ -80,13 +58,10 @@ export default function Layout() {
     )
   }
 
-  if (!role) {
-    return <Navigate to="/login" replace />
-  }
+  if (!role) return <Navigate to="/login" replace />
 
   return (
     <div className="flex h-screen bg-gray-100 dark:bg-gray-900 flex-col md:flex-row">
-      {/* MAIN CONTENT */}
       <div className="flex-1 overflow-auto pt-16 md:pt-0 pb-20 md:pb-0 bg-gray-50 dark:bg-gray-900">
         <Outlet />
       </div>
