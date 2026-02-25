@@ -23,7 +23,7 @@ export default async function handler(req, res) {
         apikey: serviceKey,
         Authorization: `Bearer ${serviceKey}`,
         'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
+        'Prefer': req.method === 'POST' ? 'return=representation' : 'return=minimal'
       }
     }
 

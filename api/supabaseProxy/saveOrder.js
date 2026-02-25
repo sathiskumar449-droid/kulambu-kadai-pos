@@ -42,6 +42,7 @@ export default async function handler(req, res) {
         // Create Order Items
         const orderItems = itemsList.map(item => ({
             order_id: orderData.id,
+            menu_item_id: item.id || null,
             item_name: item.name,
             quantity: Number(item.quantity),
             price: Number(item.price),
