@@ -148,6 +148,10 @@ export default function CartAndOrders() {
 
       triggerOrderNotification(orderNumber)
 
+      // Increment orders badge
+      const currentCount = parseInt(localStorage.getItem('unseen_orders_count') || '0', 10)
+      localStorage.setItem('unseen_orders_count', (currentCount + 1).toString())
+
       setCart([])
       setSelectedPayment(null)
       fetchOrders()

@@ -32,7 +32,7 @@ export default async function handler(req, res) {
                 order_number: orderNumber,
                 total_amount: amount,
                 payment_method: payment_method || 'cash',
-                status: 'completed'
+                status: 'PENDING'
             })
             .select('id, order_number')
             .single()

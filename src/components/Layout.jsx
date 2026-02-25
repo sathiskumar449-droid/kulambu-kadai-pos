@@ -24,24 +24,17 @@ export default function Layout() {
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
-  /* ---------------- ORDERS BADGE (FIXED) ---------------- */
+  /* ---------------- ORDERS BADGE ---------------- */
   useEffect(() => {
     let pollInterval
 
-    const loadPending = async () => {
-      try {
-        const res = await fetch('/api/supabaseProxy/orders?select=id&status=eq.Pending')
-        if (!res.ok) throw new Error('Badge API failed')
-        const data = await res.json()
-        setOrderCount(Array.isArray(data) ? data.length : 0)
-      } catch (e) {
-        console.error('Badge fetch error:', e)
-        setOrderCount(0)
-      }
+    const loadBadge = () => {
+      const storedCount = localStorage.getItem('unseen_orders_count')
+      setOrderCount(storedCount ? parseInt(storedCount, 10) : 0)
     }
 
-    loadPending()
-    pollInterval = setInterval(loadPending, 5000)
+    loadBadge()
+    pollInterval = setInterval(loadBadge, 1000)
     return () => clearInterval(pollInterval)
   }, [])
 

@@ -142,6 +142,10 @@ export default function Menu() {
       // 🔔 Trigger notification sound and browser notification
       triggerOrderNotification(result.order_number)
 
+      // Increment orders badge
+      const currentCount = parseInt(localStorage.getItem('unseen_orders_count') || '0', 10)
+      localStorage.setItem('unseen_orders_count', (currentCount + 1).toString())
+
       // Show success toast
       setToastMessage('🔔 Items Ordered Successfully!')
       setShowToast(true)
