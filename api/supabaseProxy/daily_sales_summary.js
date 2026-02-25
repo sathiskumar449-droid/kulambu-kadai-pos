@@ -1,25 +1,33 @@
-import { createClient } from '@supabase/supabase-js'
-
 export default async function handler(req, res) {
   try {
-    const supabase = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    )
+    const supabaseUrl = process.env.SUPABASE_URL
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+    if (!supabaseUrl || !serviceKey) {
+      return res.status(500).json({ error: 'Missing Supabase env vars' })
+    }
 
     const query = req.url.split('?')[1] || ''
-    const url = `${process.env.SUPABASE_URL}/rest/v1/daily_sales_summary?${query}`
+    const url = `${supabaseUrl}/rest/v1/daily_sales_summary?${query}`
 
     const response = await fetch(url, {
+      method: 'GET',
       headers: {
-        apikey: process.env.SUPABASE_SERVICE_ROLE_KEY,
-        Authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+        'Content-Type': 'application/json'
       }
     })
 
-    const data = await response.json()
+    const text = await response.text()
+
+    if (!response.ok) {
+      return res.status(response.status).json({ error: text })
+    }
+
+    const data = JSON.parse(text)
     return res.status(200).json(data)
-  } catch (e) {
-    return res.status(500).json({ error: e.message })
+  } catch (err) {
+    return res.status(500).json({ error: err.message })
   }
 }

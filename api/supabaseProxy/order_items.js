@@ -1,5 +1,3 @@
-import { createClient } from '@supabase/supabase-js'
-
 export default async function handler(req, res) {
   try {
     const supabaseUrl = process.env.SUPABASE_URL
@@ -21,10 +19,15 @@ export default async function handler(req, res) {
       }
     })
 
-    const data = await response.json()
-    return res.status(response.status).json(data)
+    const text = await response.text()
+
+    if (!response.ok) {
+      return res.status(response.status).json({ error: text })
+    }
+
+    const data = JSON.parse(text)
+    return res.status(200).json(data)
   } catch (err) {
-    console.error('order_items proxy error:', err)
-    return res.status(500).json({ error: 'Proxy failed', details: err.message })
+    return res.status(500).json({ error: err.message })
   }
 }

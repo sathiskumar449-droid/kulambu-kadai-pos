@@ -1,18 +1,33 @@
-// api/supabaseProxy/menu_items.js
-import { createClient } from '@supabase/supabase-js'
-
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-)
-
 export default async function handler(req, res) {
-  const { data, error } = await supabase
-    .from('menu_items')
-    .select('id,name,price,is_enabled,category')
-    .eq('is_enabled', true)
-    .order('created_at')
+  try {
+    const supabaseUrl = process.env.SUPABASE_URL
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-  if (error) return res.status(500).json({ error: error.message })
-  res.status(200).json(data)
+    if (!supabaseUrl || !serviceKey) {
+      return res.status(500).json({ error: 'Missing Supabase env vars' })
+    }
+
+    const query = req.url.split('?')[1] || ''
+    const url = `${supabaseUrl}/rest/v1/menu_items?${query}`
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        apikey: serviceKey,
+        Authorization: `Bearer ${serviceKey}`,
+        'Content-Type': 'application/json'
+      }
+    })
+
+    const text = await response.text()
+
+    if (!response.ok) {
+      return res.status(response.status).json({ error: text })
+    }
+
+    const data = JSON.parse(text)
+    return res.status(200).json(data)
+  } catch (err) {
+    return res.status(500).json({ error: err.message })
+  }
 }
