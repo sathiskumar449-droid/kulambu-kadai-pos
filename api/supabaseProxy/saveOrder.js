@@ -19,10 +19,17 @@ export default async function handler(req, res) {
         const amount = Number(total_amount || total)
         const itemsList = items || cart || []
 
+        // Generate Order Number
+        const now = new Date()
+        const dateStr = now.toISOString().slice(0, 10).replace(/-/g, '')
+        const randomStr = Math.floor(1000 + Math.random() * 9000).toString()
+        const orderNumber = `ORD-${dateStr}-${randomStr}`
+
         // Create Order
         const { data: orderData, error: orderError } = await supabase
             .from('orders')
             .insert({
+                order_number: orderNumber,
                 total_amount: amount,
                 payment_method: payment_method || 'cash',
                 status: 'completed'
