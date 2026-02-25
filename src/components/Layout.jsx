@@ -27,54 +27,52 @@ export default function Layout() {
 
   /* ---------------- ORDERS BADGE ---------------- */
   useEffect(() => {
-    const loadPending = async () => {
-      try {
-        const { count, error, data } = await supabase
-          .from('orders')
-          .select('*', { count: 'exact', head: false })
-          .or('status.eq.Pending,status.eq.PENDING')
+  if (!supabase) {
+    console.warn('⚠️ Supabase not initialized. Skipping badge realtime.')
+    return
+  }
 
-        if (error) {
-          console.error('❌ Badge Error:', error)
-          return
-        }
+  let pollInterval
+  let channel
 
-        if (typeof count === 'number') {
-          setOrderCount(count)
-        }
-      } catch (e) {
-        console.error('❌ Badge Exception:', e)
+  const loadPending = async () => {
+    try {
+      const { count, error } = await supabase
+        .from('orders')
+        .select('*', { count: 'exact', head: true })
+        .or('status.eq.Pending,status.eq.PENDING')
+
+      if (!error && typeof count === 'number') {
+        setOrderCount(count)
       }
+    } catch (e) {
+      console.error('❌ Badge Exception:', e)
     }
+  }
 
-    loadPending()
+  loadPending()
+  pollInterval = setInterval(loadPending, 5000)
 
-    const pollInterval = setInterval(loadPending, 3000)
-
-    const channel = supabase
-      .channel('layout-orders-badge-v3')
+  try {
+    channel = supabase
+      .channel('layout-orders-badge-safe')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'orders' },
-        () => loadPending()
-      )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'orders' },
-        () => loadPending()
-      )
-      .on(
-        'postgres_changes',
-        { event: 'DELETE', schema: 'public', table: 'orders' },
+        { event: '*', schema: 'public', table: 'orders' },
         () => loadPending()
       )
       .subscribe()
+  } catch (e) {
+    console.warn('⚠️ Realtime not available. Using polling only.')
+  }
 
-    return () => {
-      clearInterval(pollInterval)
+  return () => {
+    if (pollInterval) clearInterval(pollInterval)
+    if (channel && supabase?.removeChannel) {
       supabase.removeChannel(channel)
     }
-  }, [])
+  }
+}, [])
 
   /* ---------------- DARK MODE ---------------- */
   useEffect(() => {
