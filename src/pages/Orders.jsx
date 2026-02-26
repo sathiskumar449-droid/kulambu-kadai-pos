@@ -20,9 +20,14 @@ export default function Orders() {
 
     fetchOrders()
 
-    const pollInterval = setInterval(fetchOrders, 15000)
+    const channel = supabase.channel('orders-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, fetchOrders)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'order_items' }, fetchOrders)
+      .subscribe()
 
-    return () => clearInterval(pollInterval)
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [])
 
   const fetchOrders = async () => {
@@ -162,10 +167,7 @@ export default function Orders() {
                     setError('Could not update order status.')
                     fetchOrders()
                   } else {
-                    // Reset orders badge
-                    localStorage.setItem('unseen_orders_count', '0')
-
-                    // 🔔 Trigger notification sound
+                    // 🔔 Trigger notification sound and badge
                     triggerOrderNotification(o.orderNumber)
                     // Show success toast
                     setToastMessage('Order Marked as Placed!')

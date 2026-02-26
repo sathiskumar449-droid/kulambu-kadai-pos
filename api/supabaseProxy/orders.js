@@ -13,7 +13,20 @@ export default async function handler(req, res) {
 
   const { data, error } = await supabase
     .from('orders')
-    .select('id,order_number,status,total_amount,created_at')
+    .select(`
+      id,
+      order_number,
+      status,
+      total_amount,
+      payment_method,
+      created_at,
+      order_items (
+        item_name,
+        quantity,
+        price,
+        subtotal
+      )
+    `)
     .order('created_at', { ascending: false })
 
   if (error) return res.status(500).json({ error: error.message })
