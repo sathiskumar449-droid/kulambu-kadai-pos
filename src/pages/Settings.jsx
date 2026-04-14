@@ -105,7 +105,7 @@ export default function Settings() {
       }
 
       const res = await fetch('/api/supabaseProxy/menu_items', {
-        method: 'PUT',
+        method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       })

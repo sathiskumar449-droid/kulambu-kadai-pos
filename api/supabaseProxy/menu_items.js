@@ -1,7 +1,7 @@
 export default async function handler(req, res) {
   try {
-    const supabaseUrl = (process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL)
-    const serviceKey = (process.env.VITE_SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY)
+    const supabaseUrl = (process.env.SUPABASE_URL)
+    const serviceKey = (process.env.SUPABASE_SERVICE_ROLE_KEY)
 
     if (!supabaseUrl || !serviceKey) {
       return res.status(500).json({ error: 'Missing Supabase env vars' })
@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       const query = req.url.split('?')[1] || ''
       if (query) url += `?${query}`
-    } else if (req.method === 'PUT' || req.method === 'DELETE') {
+    } else if (req.method === 'PUT' || req.method === 'PATCH' || req.method === 'DELETE') {
       const id = req.body?.id
       if (!id) return res.status(400).json({ error: 'Missing id for update/delete' })
       url += `?id=eq.${id}`
@@ -28,7 +28,7 @@ export default async function handler(req, res) {
     }
 
     if (req.method !== 'GET' && req.method !== 'HEAD' && req.body) {
-      if (req.method === 'PUT') {
+      if (req.method === 'PUT' || req.method === 'PATCH') {
         const { id, ...updateData } = req.body;
         options.body = JSON.stringify(updateData);
       } else {

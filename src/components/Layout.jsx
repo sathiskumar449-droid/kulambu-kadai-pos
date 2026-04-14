@@ -30,13 +30,10 @@ export default function Layout() {
 
     const loadPending = async () => {
       try {
-        const res = await fetch('/api/supabaseProxy/orders')
+        const res = await fetch('/api/supabaseProxy/orders?select=id&status=eq.Pending')
         if (!res.ok) throw new Error('Badge API failed')
         const data = await res.json()
-        const pendingCount = Array.isArray(data)
-          ? data.filter(o => (o.status || '').toUpperCase() === 'PENDING').length
-          : 0
-        setOrderCount(pendingCount)
+        setOrderCount(Array.isArray(data) ? data.length : 0)
       } catch (e) {
         console.error('Badge fetch error:', e)
         setOrderCount(0)

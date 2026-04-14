@@ -26,7 +26,7 @@ const vercelApiDevPlugin = () => {
           // Inject env vars if missing
           const env = loadEnv(server.config.mode, process.cwd(), '')
           process.env.SUPABASE_URL = process.env.SUPABASE_URL || env.VITE_SUPABASE_URL
-          process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE_KEY || env.VITE_SUPABASE_ANON_KEY
+          process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || env.VITE_SUPABASE_SERVICE_ROLE_KEY || env.SUPABASE_SERVICE_ROLE_KEY || env.VITE_SUPABASE_ANON_KEY
 
           console.log(`[Proxy] Executing ${handlerPath}, SUPABASE_URL: ${process.env.SUPABASE_URL}`)
 
